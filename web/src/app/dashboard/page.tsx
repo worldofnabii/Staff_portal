@@ -32,6 +32,7 @@ export default function AlertsDashboard() {
     fetchAlerts();
     const interval = setInterval(fetchAlerts, 3000); // Poll every 3 seconds
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
 
   const clearAlert = async (id: string) => {

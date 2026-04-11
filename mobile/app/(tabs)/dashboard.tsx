@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { api } from '../../utils/api';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function PatientDashboard() {
   const [patient, setPatient] = useState<any>(null);
   const [vitals, setVitals] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchDetails = async () => {
@@ -12,6 +14,7 @@ export default function PatientDashboard() {
       const res = await api.get('/patient/me');
       setPatient(res.data.patient);
       setVitals(res.data.vitals);
+      setAppointments(res.data.appointments || []);
     } catch (e) {
       console.log('Error fetching details', e);
     }
@@ -41,12 +44,35 @@ export default function PatientDashboard() {
 
       <View style={styles.infoRow}>
         <View style={styles.infoBox}>
-          <Text style={styles.infoVal}>{patient.bloodGroup}</Text>
+          <Text style={styles.infoVal}>{patient.bloodGroup || '-'}</Text>
           <Text style={styles.infoLabel}>Blood Grp</Text>
         </View>
         <View style={styles.infoBox}>
           <Text style={styles.infoVal}>{vitals.length}</Text>
           <Text style={styles.infoLabel}>Visits</Text>
+        </View>
+      </View>
+
+      {/* Upcoming Visits */}
+      {appointments.length > 0 && (
+        <View style={{ paddingHorizontal: 20, marginTop: 30 }}>
+          <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1f2937', marginBottom: 10 }}>Upcoming Visit</Text>
+          <View style={{ backgroundColor: '#f0f9ff', padding: 20, borderRadius: 15, flexDirection: 'row', alignItems: 'center', borderColor: '#bae6fd', borderWidth: 1 }}>
+            <Ionicons name="calendar-sharp" size={30} color="#0284c7" />
+            <View style={{ marginLeft: 15 }}>
+              <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#0369a1' }}>{new Date(appointments[0].date).toDateString()}</Text>
+              <Text style={{ fontSize: 12, color: '#0ea5e9' }}>{appointments[0].purpose}</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      <View style={{ paddingHorizontal: 20, marginTop: 30 }}>
+        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1f2937', marginBottom: 10 }}>Emergency</Text>
+        <View style={{ backgroundColor: '#fee2e2', padding: 20, borderRadius: 15, alignItems: 'center', borderColor: '#fca5a5', borderWidth: 2 }}>
+          <Ionicons name="alert-circle" size={40} color="#b91c1c" />
+          <Text style={{ fontSize: 20, fontWeight: '900', color: '#b91c1c', marginTop: 10 }}>SOS ALARM</Text>
+          <Text style={{ fontSize: 12, color: '#ef4444', textAlign: 'center', marginTop: 5 }}>Tap the Emergency Tab Below to trigger instant hospital alert.</Text>
         </View>
       </View>
 
@@ -69,8 +95,14 @@ export default function PatientDashboard() {
               </View>
               <View>
                 <Text style={styles.metricLabel}>FHR</Text>
-                <Text style={styles.metricVal}>{v.fetalHeartRate ? \`\${v.fetalHeartRate} bpm\` : '-'}</Text>
+                <Text style={styles.metricVal}>{v.fetalHeartRate ? `${v.fetalHeartRate} bpm` : '-'}</Text>
               </View>
+              {v.bloodSugar && (
+                <View>
+                  <Text style={styles.metricLabel}>Sugar</Text>
+                  <Text style={styles.metricVal}>{v.bloodSugar}</Text>
+                </View>
+              )}
             </View>
           </View>
         ))

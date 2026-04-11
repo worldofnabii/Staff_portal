@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ScanFace, Search, ArrowRight, ActivitySquare } from "lucide-react";
+import { ScanFace, Search, ArrowRight } from "lucide-react";
 
 export default function PatientLookup() {
   const router = useRouter();
@@ -67,7 +67,7 @@ export default function PatientLookup() {
           
           <h2 className="relative z-10 text-2xl font-bold mb-2">QR Code Scanner</h2>
           <p className="relative z-10 text-gray-400 font-medium text-sm">
-            Point camera at patient's MammaCare digital card.
+            Point camera at patient&apos;s MammaCare digital card.
           </p>
           
           <button className="relative z-10 mt-8 px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur border border-white/10 rounded-xl font-bold transition-all text-sm">

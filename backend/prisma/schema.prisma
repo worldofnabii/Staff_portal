@@ -9,12 +9,14 @@ datasource db {
 }
 
 model Staff {
-  id       String   @id @default(cuid())
-  name     String
-  email    String   @unique
-  password String
-  role     String
-  vitals   Vitals[]
+  id               String   @id @default(cuid())
+  name             String
+  email            String   @unique
+  password         String
+  role             String
+  visits           AntenatalVisit[]
+  investigations   Investigation[]
+  preventativeCare PreventativeCare[]
 }
 
 model Patient {
@@ -25,19 +27,170 @@ model Patient {
   bloodGroup       String?
   edd              DateTime?
   emergencyContact String?
-  vitals           Vitals[]
+
+  // Mod A: Demographics
+  nin              String?
+  age              Int?
+  village          String?
+  parish           String?
+  district         String?
+  occupation       String?
+  religion         String?
+  education        String?
+  maritalStatus    String?
+
+  // Mod A: NOK
+  nokName          String?
+  nokPhone         String?
+  nokRelationship  String?
+  nokAddress       String?
+
+  // Relations
+  medicalHistory        MedicalHistory?
+  historicalPregnancies HistoricalPregnancy[]
+  visits                AntenatalVisit[]
+  investigations        Investigation[]
+  preventativeCare      PreventativeCare[]
+  carePlan              CarePlan?
+  appointments          Appointment[]
 }
 
-model Vitals {
+model MedicalHistory {
+  id                   String  @id @default(cuid())
+  patientId            String  @unique
+  patient              Patient @relation(fields: [patientId], references: [id])
+
+  // Baseline
+  gravida              Int?
+  para                 Int?
+  abortions            Int?
+  lmp                  DateTime?
+  
+  // Contraceptive
+  lengthOfMenses       String?
+  flowAmount           String?
+  familyPlanningMethod String?
+  stopReason           String?
+
+  // Medical
+  hivStatus          Boolean @default(false)
+  cardiacDisease     Boolean @default(false)
+  kidneyDisease      Boolean @default(false)
+  hypertension       Boolean @default(false)
+  tb                 Boolean @default(false)
+  asthma             Boolean @default(false)
+  sickleCell         Boolean @default(false)
+  epilepsy           Boolean @default(false)
+  diabetes           Boolean @default(false)
+
+  // Surgical/OBS
+  previousCSections  Int?
+  dAndC              Boolean @default(false)
+  ectopicPregnancies Int?
+  pph                Boolean @default(false)
+  pelvicFractures    Boolean @default(false)
+  bloodTransfusions  Boolean @default(false)
+
+  // Social/Family
+  smoking            Boolean @default(false)
+  alcohol            Boolean @default(false)
+  gbvRisk            Boolean @default(false)
+  familyTwins        Boolean @default(false)
+  familyDiabetes     Boolean @default(false)
+  familyCongenital   Boolean @default(false)
+}
+
+model HistoricalPregnancy {
+  id            String  @id @default(cuid())
+  patientId     String
+  patient       Patient @relation(fields: [patientId], references: [id])
+
+  year          String? // Using String to allow format like "2018"
+  gestation     String? // e.g., "39 weeks"
+  deliveryType  String? // e.g., "SVD", "C-Section"
+  complications String?
+  childOutcome  String? // e.g., "Alive", "FSB"
+  weight        Float?
+}
+
+model AntenatalVisit {
   id             String   @id @default(cuid())
   patientId      String
+  patient        Patient  @relation(fields: [patientId], references: [id])
   recordedById   String
-  bloodPressure  String?
-  weight         Float?
-  fetalHeartRate Float?
-  doctorNotes    String?
+  recordedBy     Staff    @relation(fields: [recordedById], references: [id])
   createdAt      DateTime @default(now())
 
-  patient    Patient @relation(fields: [patientId], references: [id])
-  recordedBy Staff   @relation(fields: [recordedById], references: [id])
+  // Triage
+  complaints      String?
+  gestationalAge  String?
+  complications   String? // Bleeding, Vomiting etc.
+
+  // Vitals
+  bloodPressure   String?
+  weight          Float?
+  height          Float?
+  pulse           Int?
+  temp            Float?
+  bmi             Float?
+  muac            Float?
+  nutritionalStatus String? // Normal, MAM, SAM
+
+  // Physical/Pelvic (Doctor only logic applies in Express)
+  generalExam     String?
+  sfHeight        Float?
+  vaginalExam     String?
+  fetalHeartRate  Float?  // Extracted from original Vitals
+  bloodSugar      Float?
+  doctorNotes     String? // Kept from original Vitals
 }
+
+model Investigation {
+  id             String   @id @default(cuid())
+  patientId      String
+  patient        Patient  @relation(fields: [patientId], references: [id])
+  recordedById   String
+  recordedBy     Staff    @relation(fields: [recordedById], references: [id])
+  createdAt      DateTime @default(now())
+
+  testType       String   // e.g., Hb, Syphilis, HIV, TB Screen, Ultrasound, Diabetic Screen, PAP Smear
+  category       String?  // Lab, Imaging
+  result         String
+  date           DateTime @default(now())
+  attachmentUrl  String?
+}
+
+model PreventativeCare {
+  id             String   @id @default(cuid())
+  patientId      String
+  patient        Patient  @relation(fields: [patientId], references: [id])
+  recordedById   String
+  recordedBy     Staff    @relation(fields: [recordedById], references: [id])
+  createdAt      DateTime @default(now())
+
+  supplementType String   // Iron, Calcium, Vitamin C, Tetanus
+  date           DateTime @default(now())
+}
+
+model CarePlan {
+  id                        String  @id @default(cuid())
+  patientId                 String  @unique
+  patient                   Patient @relation(fields: [patientId], references: [id])
+
+  feedingOption             String?
+  postpartumContraception   String?
+  transportLogistics        String?
+  maternityWaitingHome      Boolean @default(false)
+  deliveryPlan              String?
+}
+
+model Appointment {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  date      DateTime
+  purpose   String?
+  status    String   @default("Scheduled") // Scheduled, Completed, Cancelled
+  createdAt DateTime @default(now())
+}
+

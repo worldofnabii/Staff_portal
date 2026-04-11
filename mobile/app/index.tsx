@@ -15,7 +15,13 @@ export default function LoginScreen() {
     try {
       const res = await api.post('/auth/login/patient', { email, password });
       await AsyncStorage.setItem('patientToken', res.data.token);
-      router.replace('/(tabs)/dashboard');
+      
+      const hasLMP = res.data.user.medicalHistory?.lmp;
+      if (!hasLMP) {
+        router.replace('/onboarding');
+      } else {
+        router.replace('/(tabs)/dashboard');
+      }
     } catch (e: any) {
       Alert.alert("Login Failed", e.response?.data?.message || "Something went wrong.");
     } finally {

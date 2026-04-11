@@ -32,7 +32,7 @@ const authMiddleware = (req, res, next) => {
 // --- AUTH ROUTES ---
 app.post('/api/auth/register/patient', async (req, res) => {
   try {
-    const { _id, name, email, password, bloodGroup, edd, emergencyContact } = req.body;
+    const { _id, name, email, password, bloodGroup, edd, emergencyContact, nin, age, village, parish, district, occupation, religion, education, maritalStatus, nokName, nokPhone, nokRelationship, nokAddress } = req.body;
     let patient = await prisma.patient.findFirst({
       where: {
         OR: [{ id: _id }, { email }]
@@ -52,7 +52,20 @@ app.post('/api/auth/register/patient', async (req, res) => {
         password: hashedPassword,
         bloodGroup,
         edd: edd ? new Date(edd) : null,
-        emergencyContact
+        emergencyContact,
+        nin,
+        age: age ? parseInt(age) : null,
+        village,
+        parish,
+        district,
+        occupation,
+        religion,
+        education,
+        maritalStatus,
+        nokName,
+        nokPhone,
+        nokRelationship,
+        nokAddress
       }
     });
 
@@ -73,7 +86,8 @@ app.post('/api/auth/login/patient', async (req, res) => {
     if (!validPassword) return res.status(400).json({ message: 'Invalid credentials' });
 
     const token = jwt.sign({ _id: patient.id, role: 'Patient' }, process.env.JWT_SECRET);
-    res.json({ token, user: { _id: patient.id, name: patient.name, email: patient.email } });
+    const medicalHistory = await prisma.medicalHistory.findUnique({ where: { patientId: patient.id } });
+    res.json({ token, user: { _id: patient.id, name: patient.name, email: patient.email, medicalHistory } });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -106,13 +120,43 @@ app.get('/api/patient/me', authMiddleware, async (req, res) => {
     // omit password in response for safety
     const { password, ...patientWithoutPassword } = patient;
 
-    const vitals = await prisma.vitals.findMany({
+    const vitals = await prisma.antenatalVisit.findMany({
       where: { patientId: patient.id },
       orderBy: { createdAt: 'desc' }
     });
+
+    const investigations = await prisma.investigation.findMany({
+      where: { patientId: patient.id },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const appointments = await prisma.appointment.findMany({
+      where: { patientId: patient.id, date: { gte: new Date() } },
+      orderBy: { date: 'asc' }
+    });
     
-    // Front-end code relies on patient._id
-    res.json({ patient: { ...patientWithoutPassword, _id: patient.id }, vitals });
+    const preventativeCare = await prisma.preventativeCare.findMany({
+      where: { patientId: patient.id },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const carePlan = await prisma.carePlan.findUnique({
+      where: { patientId: patient.id }
+    });
+
+    const medicalHistory = await prisma.medicalHistory.findUnique({
+      where: { patientId: patient.id }
+    });
+    
+    res.json({ 
+      patient: { ...patientWithoutPassword, _id: patient.id }, 
+      vitals, 
+      investigations, 
+      appointments, 
+      preventativeCare, 
+      carePlan,
+      medicalHistory
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -148,7 +192,7 @@ app.get('/api/hospital/patient/:id', authMiddleware, async (req, res) => {
 
     const { password, ...patientWithoutPassword } = patient;
 
-    const vitals = await prisma.vitals.findMany({
+    const vitals = await prisma.antenatalVisit.findMany({
       where: { patientId: patient.id },
       orderBy: { createdAt: 'desc' },
       include: {
@@ -157,8 +201,32 @@ app.get('/api/hospital/patient/:id', authMiddleware, async (req, res) => {
         }
       }
     });
+
+    const medicalHistory = await prisma.medicalHistory.findUnique({
+      where: { patientId: patient.id }
+    });
+
+    const historicalPregnancies = await prisma.historicalPregnancy.findMany({
+      where: { patientId: patient.id }
+    });
+
+    const investigations = await prisma.investigation.findMany({
+      where: { patientId: patient.id },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const carePlan = await prisma.carePlan.findUnique({
+      where: { patientId: patient.id }
+    });
     
-    res.json({ patient: { ...patientWithoutPassword, _id: patient.id }, vitals });
+    res.json({ 
+      patient: { ...patientWithoutPassword, _id: patient.id }, 
+      vitals, 
+      medicalHistory, 
+      historicalPregnancies, 
+      investigations, 
+      carePlan 
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -170,19 +238,32 @@ app.post('/api/hospital/vitals', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    const { patientId, bloodPressure, weight, fetalHeartRate, doctorNotes } = req.body;
+    const { patientId, complaints, gestationalAge, complications, bloodPressure, weight, height, pulse, temp, bmi, muac, nutritionalStatus, generalExam, sfHeight, vaginalExam, fetalHeartRate, bloodSugar, doctorNotes } = req.body;
     
-    if (req.user.role === 'Nurse' && doctorNotes) {
-      return res.status(403).json({ message: 'Nurses cannot add doctor notes' });
+    if (req.user.role === 'Nurse' && (doctorNotes || generalExam || vaginalExam)) {
+      return res.status(403).json({ message: 'Nurses cannot add doctor notes or physical/pelvic exams' });
     }
 
-    const vitals = await prisma.vitals.create({
+    const vitals = await prisma.antenatalVisit.create({
       data: {
         patientId,
         recordedById: req.user._id,
+        complaints,
+        gestationalAge,
+        complications,
         bloodPressure,
         weight: weight ? parseFloat(weight) : null,
+        height: height ? parseFloat(height) : null,
+        pulse: pulse ? parseInt(pulse) : null,
+        temp: temp ? parseFloat(temp) : null,
+        bmi: bmi ? parseFloat(bmi) : null,
+        muac: muac ? parseFloat(muac) : null,
+        nutritionalStatus,
         fetalHeartRate: fetalHeartRate ? parseFloat(fetalHeartRate) : null,
+        bloodSugar: bloodSugar ? parseFloat(bloodSugar) : null,
+        generalExam: req.user.role === 'Doctor' ? generalExam : null,
+        sfHeight: sfHeight ? parseFloat(sfHeight) : null,
+        vaginalExam: req.user.role === 'Doctor' ? vaginalExam : null,
         doctorNotes: req.user.role === 'Doctor' ? doctorNotes : null
       }
     });
@@ -206,6 +287,82 @@ app.post('/api/hospital/alerts/:id/clear', authMiddleware, (req, res) => {
   }
   activeAlerts = activeAlerts.filter(a => a.id !== req.params.id);
   res.json({ message: 'Alert cleared' });
+});
+
+// --- NEW V2.0 ENDPOINTS ---
+
+app.post('/api/patient/onboarding', authMiddleware, async (req, res) => {
+  try {
+    const { lmp } = req.body;
+    if (!lmp) return res.status(400).json({ message: 'LMP is required' });
+
+    const history = await prisma.medicalHistory.upsert({
+      where: { patientId: req.user._id },
+      update: { lmp: new Date(lmp) },
+      create: { patientId: req.user._id, lmp: new Date(lmp) }
+    });
+
+    // Also update Patient EDD (LMP + 280 days)
+    const edd = new Date(new Date(lmp).getTime() + 1000 * 60 * 60 * 24 * 280);
+    await prisma.patient.update({
+      where: { id: req.user._id },
+      data: { edd }
+    });
+
+    res.json({ message: 'Onboarding complete', history });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/hospital/patient/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'Doctor' && req.user.role !== 'Nurse') return res.status(403).json({ message: 'Denied' });
+    const p = await prisma.patient.update({
+      where: { id: req.params.id },
+      data: req.body
+    });
+    res.json({ message: 'Patient updated', patient: p });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/hospital/patient/:id/history', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'Doctor') return res.status(403).json({ message: 'Only Doctors can update Medical History' });
+    const history = await prisma.medicalHistory.upsert({
+      where: { patientId: req.params.id },
+      update: req.body,
+      create: { patientId: req.params.id, ...req.body }
+    });
+    res.json({ message: 'Medical History saved', history });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/hospital/patient/:id/investigations', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'Doctor') return res.status(403).json({ message: 'Only Doctors can add Labs' });
+    const inv = await prisma.investigation.create({
+      data: {
+        patientId: req.params.id,
+        recordedById: req.user._id,
+        testType: req.body.testType,
+        result: req.body.result
+      }
+    });
+    res.json({ message: 'Lab recorded', investigation: inv });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/hospital/patient/:id/careplan', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'Doctor') return res.status(403).json({ message: 'Only Doctors can update Care Plans' });
+    const plan = await prisma.carePlan.upsert({
+      where: { patientId: req.params.id },
+      update: req.body,
+      create: { patientId: req.params.id, ...req.body }
+    });
+    res.json({ message: 'Care Plan saved', plan });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // Pre-load some SOS alerts upon startup for real-time simulation

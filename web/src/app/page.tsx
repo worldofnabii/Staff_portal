@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/utils/api";
-import { HeartPulse, Loader2 } from "lucide-react";
+import { HeartPulse, Loader2, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,6 +22,7 @@ export default function LoginPage() {
       localStorage.setItem("staffRole", res.data.user.role);
       localStorage.setItem("staffName", res.data.user.name);
       router.push("/dashboard");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.response?.data?.message || "Login failed");
     } finally {
@@ -30,39 +31,46 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-brand-50 to-brand-100">
-      <div className="w-full max-w-md p-8 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50">
-        <div className="flex flex-col items-center mb-8">
-          <div className="p-4 bg-brand-500 rounded-2xl text-white shadow-lg mb-4">
-            <HeartPulse size={40} />
+    <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-gray-50">
+      {/* Animated Orbs */}
+      <div className="absolute top-0 -left-4 w-96 h-96 bg-brand-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+      <div className="absolute top-0 -right-4 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+      <div className="absolute -bottom-8 left-20 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
+
+      <div className="z-10 w-full max-w-md p-8 glass-panel rounded-[2.5rem]">
+        <div className="flex flex-col items-center mb-10 mt-4">
+          <div className="p-4 bg-gradient-to-tr from-brand-600 to-brand-400 rounded-3xl text-white shadow-xl shadow-brand-500/30 mb-6 transform -rotate-6 hover:rotate-0 transition duration-300">
+            <HeartPulse size={48} strokeWidth={2.5} />
           </div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">MammaCare</h1>
-          <p className="text-gray-500 mt-2 text-sm font-medium">Hospital Staff Portal</p>
+          <h1 className="text-4xl font-black text-gray-900 tracking-tighter mb-1 relative">
+            Mamma<span className="text-brand-600">Care</span>
+          </h1>
+          <p className="text-gray-500 font-medium tracking-wide uppercase text-xs">Medical Provider Portal</p>
         </div>
 
         {error && (
-          <div className="p-4 mb-6 text-sm text-red-700 bg-red-100/50 backdrop-blur-md rounded-2xl border border-red-200">
+          <div className="p-4 mb-6 text-sm font-bold text-red-600 bg-red-50/80 backdrop-blur-md rounded-2xl border border-red-100">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Work Email</label>
             <input
               type="email"
-              className="w-full px-5 py-4 rounded-xl border border-gray-200 bg-white/50 focus:bg-white focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none"
-              placeholder="doctor@hospital.com"
+              className="w-full px-5 py-4 rounded-2xl border-2 border-white/50 bg-white/40 focus:bg-white focus:ring-0 focus:border-brand-500 transition-all outline-none text-gray-700 font-semibold shadow-inner"
+              placeholder="e.g. doctor@hospital.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Password</label>
             <input
               type="password"
-              className="w-full px-5 py-4 rounded-xl border border-gray-200 bg-white/50 focus:bg-white focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none"
+              className="w-full px-5 py-4 rounded-2xl border-2 border-white/50 bg-white/40 focus:bg-white focus:ring-0 focus:border-brand-500 transition-all outline-none text-gray-700 font-semibold shadow-inner"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -72,14 +80,17 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 px-6 bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-[0_8px_30px_rgb(219,39,119,0.3)] transition-all flex items-center justify-center gap-2"
+            className="group w-full mt-8 py-4 px-6 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 active:scale-[0.98] text-white font-bold rounded-2xl shadow-xl shadow-brand-500/25 transition-all flex items-center justify-center gap-2 overflow-hidden relative"
           >
-            {loading ? <Loader2 className="animate-spin" /> : "Sign In"}
+            <span className="absolute w-0 h-0 transition-all duration-500 ease-out bg-white rounded-full group-hover:w-56 group-hover:h-56 opacity-10"></span>
+            {loading ? <Loader2 className="animate-spin" /> : (
+              <>Sign In Securely <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
+            )}
           </button>
         </form>
 
-        <div className="mt-8 text-center text-xs text-gray-400">
-          MammaCare Digital Antenatal System &copy; {new Date().getFullYear()}
+        <div className="mt-10 text-center text-xs font-semibold text-gray-400">
+          Encrypted &middot; Protected Health Information
         </div>
       </div>
     </div>
