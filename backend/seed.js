@@ -7,186 +7,115 @@ dotenv.config();
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('PostgreSQL connected for enhanced seeding');
-
-  // Clear existing items
-  await prisma.antenatalVisit.deleteMany({});
-  await prisma.carePlan.deleteMany({});
-  await prisma.preventativeCare.deleteMany({});
-  await prisma.investigation.deleteMany({});
-  await prisma.historicalPregnancy.deleteMany({});
-  await prisma.medicalHistory.deleteMany({});
-  await prisma.appointment.deleteMany({});
-  await prisma.staff.deleteMany({});
-  await prisma.patient.deleteMany({});
+  console.log('Scaling MammaCare with massive multi-tenant data...');
 
   const salt = await bcrypt.genSalt(10);
   const password = await bcrypt.hash('password123', salt);
 
-  // --- SEED STAFF ---
-  const doctor1 = await prisma.staff.create({
-    data: { name: 'Dr. Jane Smith', email: 'doctor@hospital.com', password, role: 'Doctor' }
-  });
-
-  const doctor2 = await prisma.staff.create({
-    data: { name: 'Dr. Alan Grant', email: 'agrant@hospital.com', password, role: 'Doctor' }
-  });
-
-  const nurse1 = await prisma.staff.create({
-    data: { name: 'Nurse Joy', email: 'nurse@hospital.com', password, role: 'Nurse' }
-  });
-
-  // --- SEED PATIENTS ---
-  const patientsData = [
-    {
-      id: 'PATIENT-12345',
-      name: 'Sarah Connor',
-      email: 'sarah@example.com',
-      password,
-      bloodGroup: 'O+',
-      edd: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 120), // ~4 months from now
-      emergencyContact: 'John Connor: 555-0199',
-      nin: 'NIN12345678',
-      age: 28,
-      village: 'Ntinda',
-      district: 'Kampala',
-      occupation: 'Teacher',
-      religion: 'Christian',
-      education: 'University',
-      maritalStatus: 'Married'
-    },
-    {
-      id: 'PATIENT-67890',
-      name: 'Elena Gilbert',
-      email: 'elena@mysticfalls.com',
-      password,
-      bloodGroup: 'A-',
-      edd: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 30), // ~1 month from now
-      emergencyContact: 'Stefan Salvatore: 555-0100',
-      nin: 'NIN98765432',
-      age: 24,
-      village: 'Mystic Falls',
-      district: 'Wakiso',
-      occupation: 'Student',
-      religion: 'None',
-      education: 'High School',
-      maritalStatus: 'Single'
-    },
-    {
-      id: 'PATIENT-11223',
-      name: 'Lois Lane',
-      email: 'lois@dailyplanet.com',
-      password,
-      bloodGroup: 'B+',
-      edd: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 60), // ~2 months from now
-      emergencyContact: 'Clark Kent: 555-9999',
-      nin: 'NIN11223344',
-      age: 32,
-      village: 'Metropolis',
-      district: 'Mukono',
-      occupation: 'Journalist',
-      religion: 'Christian',
-      education: 'Masters',
-      maritalStatus: 'Married'
-    }
+  // 1. CREATE HOSPITALS
+  const hospitalsData = [
+    { name: 'MammaCare General Hospital', address: '123 Health Ave, Kampala', licenseNumber: 'MOU-HQ-001' },
+    { name: 'Western Memorial Medical Center', address: '45 Ridge Rd, Fort Portal', licenseNumber: 'MOU-WEST-002' },
+    { name: 'St. Mary’s Maternity Clinic', address: '88 Grace St, Gulu', licenseNumber: 'MOU-NORTH-003' }
   ];
 
-  for (const p of patientsData) {
-    await prisma.patient.create({ data: p });
+  const hospitals = [];
+  for (const h of hospitalsData) {
+    const created = await prisma.hospital.upsert({
+      where: { licenseNumber: h.licenseNumber },
+      update: h,
+      create: h
+    });
+    hospitals.push(created);
   }
 
-  // --- SEED COMPREHENSIVE MEDICAL HISTORIES ---
-  const histories = [
-    { patientId: 'PATIENT-12345', gravida: 2, para: 1, abortions: 0, hivStatus: false, hypertension: false, diabetes: false, sickleCell: false },
-    { patientId: 'PATIENT-67890', gravida: 1, para: 0, abortions: 0, hivStatus: false, hypertension: true, diabetes: false, sickleCell: false },
-    { patientId: 'PATIENT-11223', gravida: 3, para: 2, abortions: 0, hivStatus: false, hypertension: false, diabetes: true, sickleCell: false }
+  // 2. CREATE STAFF (Admins, Doctors, Nurses)
+  const staffData = [
+    // HQ STAFF
+    { name: 'Hospital Admin', email: 'admin@hospital.com', role: 'Admin', hospitalId: hospitals[0].id },
+    { name: 'Dr. Jane Smith', email: 'doctor@hospital.com', role: 'Doctor', hospitalId: hospitals[0].id },
+    { name: 'Nurse Joy', email: 'nurse@hospital.com', role: 'Nurse', hospitalId: hospitals[0].id },
+    // MEMORIAL STAFF
+    { name: 'Memorial Admin', email: 'admin@memorial.com', role: 'Admin', hospitalId: hospitals[1].id },
+    { name: 'Dr. Alan Grant', email: 'alan@memorial.com', role: 'Doctor', hospitalId: hospitals[1].id },
+    // ST MARYS STAFF
+    { name: 'St Mary Admin', email: 'admin@stmarys.com', role: 'Admin', hospitalId: hospitals[2].id },
+    { name: 'Nurse Sarah', email: 'sarah@stmarys.com', role: 'Nurse', hospitalId: hospitals[2].id }
   ];
 
-  for (const h of histories) {
-    await prisma.medicalHistory.create({ data: h });
+  const staff = [];
+  for (const s of staffData) {
+    const created = await prisma.staff.upsert({
+      where: { email: s.email },
+      update: { ...s, password },
+      create: { ...s, password }
+    });
+    staff.push(created);
   }
 
-  // --- SEED HISTORICAL PREGNANCIES ---
-  await prisma.historicalPregnancy.create({
-    data: { patientId: 'PATIENT-12345', year: '2022', gestation: '39 weeks', deliveryType: 'SVD', complications: 'None', childOutcome: 'Alive', weight: 3.2 }
-  });
-  await prisma.historicalPregnancy.create({
-    data: { patientId: 'PATIENT-11223', year: '2020', gestation: '40 weeks', deliveryType: 'C-Section', complications: 'Fetal Distress', childOutcome: 'Alive', weight: 4.1 }
-  });
-
-  // --- SEED VITALS AND EXAMS (ANTENATAL VISITS) ---
-  const visits = [
-    // Sarah's History (Healthy Trend)
-    { patientId: 'PATIENT-12345', recordedById: nurse1.id, bloodPressure: '110/70', weight: 62.5, fetalHeartRate: 142, bloodSugar: 5.4, docNotes: null },
-    { patientId: 'PATIENT-12345', recordedById: doctor1.id, bloodPressure: '115/75', weight: 64.0, fetalHeartRate: 145, bloodSugar: 5.6, generalExam: 'Normal contour, fundal height 22cm', docNotes: 'Patient progress is excellent. Standard follow-up scheduled.' },
-    
-    // Elena's History (High Risk Simulation: Increasing BP - Preeclampsia)
-    { patientId: 'PATIENT-67890', recordedById: nurse1.id, bloodPressure: '130/85', weight: 70.0, fetalHeartRate: 138, bloodSugar: 6.1, docNotes: null },
-    { patientId: 'PATIENT-67890', recordedById: nurse1.id, bloodPressure: '140/95', weight: 71.5, fetalHeartRate: 140, bloodSugar: 6.3, docNotes: null },
-    { patientId: 'PATIENT-67890', recordedById: doctor2.id, bloodPressure: '155/100', weight: 73.0, fetalHeartRate: 148, bloodSugar: 6.5, generalExam: 'Edema present in lower extremities. Hyperreflexia.', docNotes: 'Signs of severe Preeclampsia. Admitting for monitoring.' },
-
-    // Lois's History (Gestational Diabetes tracking)
-    { patientId: 'PATIENT-11223', recordedById: doctor1.id, bloodPressure: '120/80', weight: 80.0, fetalHeartRate: 150, bloodSugar: 8.9, generalExam: 'Fundal height 28cm. Mild polyhydramnios.', docNotes: 'Monitor blood glucose. Prescribing diet control.' }
+  // 3. CREATE PATIENTS (20+ diverse scenarios)
+  const patientsToCreate = [
+    { id: 'PATIENT-001', name: 'Elena Gilbert', email: 'elena@mysticfalls.com', hospitalId: hospitals[0].id, bloodGroup: 'A-' },
+    { id: 'PATIENT-002', name: 'Sarah Connor', email: 'sarah@example.com', hospitalId: hospitals[0].id, bloodGroup: 'O+' },
+    { id: 'PATIENT-003', name: 'Lois Lane', email: 'lois@dailyplanet.com', hospitalId: hospitals[0].id, bloodGroup: 'B+' },
+    { id: 'PATIENT-004', name: 'Mary Jane', email: 'mj@oscorp.com', hospitalId: hospitals[1].id, bloodGroup: 'O-' },
+    { id: 'PATIENT-005', name: 'Diana Prince', email: 'diana@themyscira.com', hospitalId: hospitals[2].id, bloodGroup: 'AB+' }
   ];
 
-  for (const v of visits) {
-    const { docNotes, ...data } = v;
-    await prisma.antenatalVisit.create({
+  // Adding more generic scale
+  for(let i=6; i<=25; i++) {
+    const hIdx = i % 3;
+    patientsToCreate.push({
+      id: `PATIENT-${i.toString().padStart(3, '0')}`,
+      name: `Patient Example ${i}`,
+      email: `patient${i}@example.com`,
+      hospitalId: hospitals[hIdx].id,
+      bloodGroup: i % 2 === 0 ? 'O+' : 'A+'
+    });
+  }
+
+  for (const p of patientsToCreate) {
+    await prisma.patient.upsert({
+      where: { email: p.email },
+      update: { ...p, password, edd: new Date(Date.now() + 1000*60*60*24*150) },
+      create: { ...p, password, edd: new Date(Date.now() + 1000*60*60*24*150) }
+    });
+  }
+
+  // 4. CREATE PRESCRIPTIONS
+  const meds = [
+    { patientId: 'PATIENT-001', medication: 'Methyldopa (Aldomet)', dosage: '250mg', frequency: 'TID', duration: 'Until Delivery', notes: 'Maintain BP below 140/90' },
+    { patientId: 'PATIENT-001', medication: 'Folic Acid', dosage: '5mg', frequency: 'Once Daily', duration: '90 days', notes: 'Standard supplement' },
+    { patientId: 'PATIENT-003', medication: 'Metformin', dosage: '500mg', frequency: 'Twice Daily', duration: '30 days', notes: 'G-Diabetes management' },
+    { patientId: 'PATIENT-005', medication: 'Iron Supplement', dosage: '200mg', frequency: 'Once Daily', duration: '6 months', notes: 'For mild anemia' }
+  ];
+
+  for (const m of meds) {
+    const doc = staff.find(s => s.role === 'Doctor' && s.hospitalId === hospitals.find(h => h.patients?.some(p => p.id === m.patientId))?.id) || staff.find(s => s.role === 'Doctor');
+    await prisma.prescription.create({
       data: {
-        ...data,
-        doctorNotes: docNotes
+        ...m,
+        prescribedById: doc.id,
+        hospitalId: doc.hospitalId
       }
     });
   }
 
-  // --- SEED INVESTIGATIONS (LABS) ---
-  const labs = [
-    { patientId: 'PATIENT-12345', recordedById: doctor1.id, testType: 'Complete Blood Count', category: 'Lab', result: 'Hb: 12.5 g/dL, WBC: 7.2, Plt: 210', attachmentUrl: '#' },
-    { patientId: 'PATIENT-12345', recordedById: doctor1.id, testType: 'Glucose Tolerance Test', category: 'Lab', result: 'Fasting: 92 mg/dL, 1hr: 140 mg/dL', attachmentUrl: '#' },
-    { patientId: 'PATIENT-12345', recordedById: doctor1.id, testType: 'Obstetric Ultrasound', category: 'Imaging', result: 'Single live fetus, cephalic, 22 weeks gestation.', attachmentUrl: '#' },
-    { patientId: 'PATIENT-12345', recordedById: doctor1.id, testType: 'Urinalysis', category: 'Lab', result: 'Protein: Neg, Sugar: Neg, WBC: 0-2', attachmentUrl: '#' },
-    { patientId: 'PATIENT-67890', recordedById: doctor2.id, testType: 'Urine Protein', category: 'Lab', result: '+++', attachmentUrl: '#' },
-    { patientId: 'PATIENT-11223', recordedById: doctor1.id, testType: 'Oral Glucose Tolerance Test', category: 'Lab', result: '155 mg/dL (Elevated)', attachmentUrl: '#' }
-  ];
-
-  for (const l of labs) {
-    await prisma.investigation.create({ data: l });
-  }
-
-  // --- SEED PREVENTATIVE CARE ---
-  const prevents = [
-    { patientId: 'PATIENT-12345', recordedById: nurse1.id, supplementType: 'Folic Acid / Iron' },
-    { patientId: 'PATIENT-12345', recordedById: nurse1.id, supplementType: 'Tetanus Toxoid 1' }
-  ];
-
-  for (const p of prevents) {
-    await prisma.preventativeCare.create({ data: p });
-  }
-
-  // --- SEED CARE PLANS ---
-  await prisma.carePlan.create({
-    data: { patientId: 'PATIENT-12345', feedingOption: 'Exclusive Breastfeeding', maternityWaitingHome: false, deliveryPlan: 'SVD prepared for ward B.' }
-  });
-  await prisma.carePlan.create({
-    data: { patientId: 'PATIENT-67890', feedingOption: 'Formula', maternityWaitingHome: true, deliveryPlan: 'High risk induced delivery. NICU standby.' }
+  // 5. SEED VITALS HISTORY
+  await prisma.antenatalVisit.create({
+    data: {
+      patientId: 'PATIENT-001',
+      recordedById: staff[2].id, // Nurse Joy
+      hospitalId: hospitals[0].id,
+      bloodPressure: '150/100',
+      weight: 72.5,
+      fetalHeartRate: 145,
+      bloodSugar: 6.2,
+      doctorNotes: 'Preeclampsia warning. Prescribed Methyldopa.'
+    }
   });
 
-  // --- SEED APPOINTMENTS ---
-  const appointments = [
-    { patientId: 'PATIENT-12345', date: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 7), purpose: 'Routine Antenatal Follow-up' },
-    { patientId: 'PATIENT-12345', date: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 21), purpose: 'Anatomy Scan' },
-    { patientId: 'PATIENT-67890', date: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 2), purpose: 'BP Monitoring' }
-  ];
-
-  for (const a of appointments) {
-    await prisma.appointment.create({ data: a });
-  }
-
-  console.log('Database seeded with comprehensive realtime data across all v2.0 structures.');
-  console.log('Test Doctor: doctor@hospital.com / password123');
-  console.log('Test Patient 1 (Healthy Demo): sarah@example.com (PATIENT-12345)');
-  console.log('Test Patient 2 (Pre-eclampsia Demo): elena@mysticfalls.com (PATIENT-67890)');
-  console.log('Test Patient 3 (G-Diabetes Demo): lois@dailyplanet.com (PATIENT-11223)');
+  console.log('System Scaled Successfully!');
 }
 
 main()

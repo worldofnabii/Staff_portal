@@ -8,15 +8,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Hospital {
+  id            String    @id @default(uuid())
+  name          String
+  address       String
+  licenseNumber String    @unique
+  createdAt     DateTime  @default(now())
+
+  staff         Staff[]
+  patients      Patient[]
+  visits        AntenatalVisit[]
+  investigations Investigation[]
+  preventativeCare PreventativeCare[]
+  appointments  Appointment[]
+  prescriptions Prescription[]
+}
+
 model Staff {
   id               String   @id @default(cuid())
   name             String
   email            String   @unique
   password         String
-  role             String
+  role             String   // Admin, Doctor, Nurse
+  mustChangePassword Boolean @default(false)
+  
+  hospitalId       String
+  hospital         Hospital @relation(fields: [hospitalId], references: [id])
+
   visits           AntenatalVisit[]
   investigations   Investigation[]
   preventativeCare PreventativeCare[]
+  prescriptions    Prescription[]
 }
 
 model Patient {
@@ -28,7 +50,10 @@ model Patient {
   edd              DateTime?
   emergencyContact String?
 
-  // Mod A: Demographics
+  hospitalId       String
+  hospital         Hospital @relation(fields: [hospitalId], references: [id])
+
+  // Demographics/NOK
   nin              String?
   age              Int?
   village          String?
@@ -38,8 +63,6 @@ model Patient {
   religion         String?
   education        String?
   maritalStatus    String?
-
-  // Mod A: NOK
   nokName          String?
   nokPhone         String?
   nokRelationship  String?
@@ -53,26 +76,22 @@ model Patient {
   preventativeCare      PreventativeCare[]
   carePlan              CarePlan?
   appointments          Appointment[]
+  prescriptions         Prescription[]
+  medicationLogs        MedicationLog[]
 }
 
 model MedicalHistory {
   id                   String  @id @default(cuid())
   patientId            String  @unique
   patient              Patient @relation(fields: [patientId], references: [id])
-
-  // Baseline
   gravida              Int?
   para                 Int?
   abortions            Int?
   lmp                  DateTime?
-  
-  // Contraceptive
   lengthOfMenses       String?
   flowAmount           String?
   familyPlanningMethod String?
   stopReason           String?
-
-  // Medical
   hivStatus          Boolean @default(false)
   cardiacDisease     Boolean @default(false)
   kidneyDisease      Boolean @default(false)
@@ -82,16 +101,12 @@ model MedicalHistory {
   sickleCell         Boolean @default(false)
   epilepsy           Boolean @default(false)
   diabetes           Boolean @default(false)
-
-  // Surgical/OBS
   previousCSections  Int?
   dAndC              Boolean @default(false)
   ectopicPregnancies Int?
   pph                Boolean @default(false)
   pelvicFractures    Boolean @default(false)
   bloodTransfusions  Boolean @default(false)
-
-  // Social/Family
   smoking            Boolean @default(false)
   alcohol            Boolean @default(false)
   gbvRisk            Boolean @default(false)
@@ -104,12 +119,11 @@ model HistoricalPregnancy {
   id            String  @id @default(cuid())
   patientId     String
   patient       Patient @relation(fields: [patientId], references: [id])
-
-  year          String? // Using String to allow format like "2018"
-  gestation     String? // e.g., "39 weeks"
-  deliveryType  String? // e.g., "SVD", "C-Section"
+  year          String?
+  gestation     String?
+  deliveryType  String?
   complications String?
-  childOutcome  String? // e.g., "Alive", "FSB"
+  childOutcome  String?
   weight        Float?
 }
 
@@ -119,14 +133,12 @@ model AntenatalVisit {
   patient        Patient  @relation(fields: [patientId], references: [id])
   recordedById   String
   recordedBy     Staff    @relation(fields: [recordedById], references: [id])
+  hospitalId     String
+  hospital       Hospital @relation(fields: [hospitalId], references: [id])
   createdAt      DateTime @default(now())
-
-  // Triage
   complaints      String?
   gestationalAge  String?
-  complications   String? // Bleeding, Vomiting etc.
-
-  // Vitals
+  complications   String?
   bloodPressure   String?
   weight          Float?
   height          Float?
@@ -134,15 +146,13 @@ model AntenatalVisit {
   temp            Float?
   bmi             Float?
   muac            Float?
-  nutritionalStatus String? // Normal, MAM, SAM
-
-  // Physical/Pelvic (Doctor only logic applies in Express)
+  nutritionalStatus String?
   generalExam     String?
   sfHeight        Float?
   vaginalExam     String?
-  fetalHeartRate  Float?  // Extracted from original Vitals
+  fetalHeartRate  Float?
   bloodSugar      Float?
-  doctorNotes     String? // Kept from original Vitals
+  doctorNotes     String?
 }
 
 model Investigation {
@@ -151,10 +161,11 @@ model Investigation {
   patient        Patient  @relation(fields: [patientId], references: [id])
   recordedById   String
   recordedBy     Staff    @relation(fields: [recordedById], references: [id])
+  hospitalId     String
+  hospital       Hospital @relation(fields: [hospitalId], references: [id])
   createdAt      DateTime @default(now())
-
-  testType       String   // e.g., Hb, Syphilis, HIV, TB Screen, Ultrasound, Diabetic Screen, PAP Smear
-  category       String?  // Lab, Imaging
+  testType       String
+  category       String?
   result         String
   date           DateTime @default(now())
   attachmentUrl  String?
@@ -166,17 +177,47 @@ model PreventativeCare {
   patient        Patient  @relation(fields: [patientId], references: [id])
   recordedById   String
   recordedBy     Staff    @relation(fields: [recordedById], references: [id])
+  hospitalId     String
+  hospital       Hospital @relation(fields: [hospitalId], references: [id])
+  createdAt      DateTime @default(now())
+  supplementType String
+  date           DateTime @default(now())
+}
+
+model Prescription {
+  id             String   @id @default(cuid())
+  patientId      String
+  patient        Patient  @relation(fields: [patientId], references: [id])
+  prescribedById String
+  prescribedBy   Staff    @relation(fields: [prescribedById], references: [id])
+  hospitalId     String
+  hospital       Hospital @relation(fields: [hospitalId], references: [id])
   createdAt      DateTime @default(now())
 
-  supplementType String   // Iron, Calcium, Vitamin C, Tetanus
-  date           DateTime @default(now())
+  medication     String
+  dosage         String
+  frequency      String
+  duration       String
+  notes          String?
+  isActive       Boolean  @default(true)
+
+  logs           MedicationLog[]
+}
+
+model MedicationLog {
+  id             String   @id @default(cuid())
+  patientId      String
+  patient        Patient  @relation(fields: [patientId], references: [id])
+  prescriptionId String
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id])
+  takenAt        DateTime @default(now())
+  notes          String?
 }
 
 model CarePlan {
   id                        String  @id @default(cuid())
   patientId                 String  @unique
   patient                   Patient @relation(fields: [patientId], references: [id])
-
   feedingOption             String?
   postpartumContraception   String?
   transportLogistics        String?
@@ -188,9 +229,10 @@ model Appointment {
   id        String   @id @default(cuid())
   patientId String
   patient   Patient  @relation(fields: [patientId], references: [id])
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
   date      DateTime
   purpose   String?
-  status    String   @default("Scheduled") // Scheduled, Completed, Cancelled
+  status    String   @default("Scheduled")
   createdAt DateTime @default(now())
 }
-

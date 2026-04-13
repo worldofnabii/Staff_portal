@@ -7,6 +7,7 @@ export default function PatientDashboard() {
   const [patient, setPatient] = useState<any>(null);
   const [vitals, setVitals] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchDetails = async () => {
@@ -15,8 +16,18 @@ export default function PatientDashboard() {
       setPatient(res.data.patient);
       setVitals(res.data.vitals);
       setAppointments(res.data.appointments || []);
+      setPrescriptions(res.data.prescriptions || []);
     } catch (e) {
       console.log('Error fetching details', e);
+    }
+  };
+
+  const markMedTaken = async (id: string) => {
+    try {
+      await api.post('/patient/medication-log', { prescriptionId: id });
+      await fetchDetails();
+    } catch (e) {
+      console.log('Error logging med', e);
     }
   };
 
@@ -53,8 +64,42 @@ export default function PatientDashboard() {
         </View>
       </View>
 
+      {/* Daily Medications */}
+      <View style={{ paddingHorizontal: 20, marginTop: 30 }}>
+        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1f2937', marginBottom: 10 }}>My Medications</Text>
+        {prescriptions.length === 0 ? (
+          <View style={{ backgroundColor: '#f9fafb', padding: 20, borderRadius: 15, borderStyle: 'dashed', borderWidth: 1, borderColor: '#d1d5db' }}>
+            <Text style={{ color: '#9ca3af', textAlign: 'center' }}>No active prescriptions</Text>
+          </View>
+        ) : (
+          prescriptions.map((m, i) => {
+            const takenToday = m.logs && m.logs.length > 0;
+            return (
+              <View key={i} style={{ backgroundColor: '#fff', padding: 15, borderRadius: 15, marginBottom: 10, borderLeftWidth: 5, borderLeftColor: takenToday ? '#10b981' : '#db2777', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#111827' }}>{m.medication}</Text>
+                    <Text style={{ fontSize: 12, color: '#6b7280' }}>{m.dosage} • {m.frequency} • {m.duration}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    disabled={takenToday}
+                    onPress={() => markMedTaken(m.id)}
+                    style={{ backgroundColor: takenToday ? '#ecfdf5' : '#db2777', paddingHorizontal: 15, py: 8, borderRadius: 10 }}
+                  >
+                    <Text style={{ color: takenToday ? '#059669' : '#fff', fontWeight: 'bold', fontSize: 12 }}>
+                      {takenToday ? 'Taken ✓' : 'Take Now'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })
+        )}
+      </View>
+
       {/* Upcoming Visits */}
       {appointments.length > 0 && (
+// ... existing Appointments ...
         <View style={{ paddingHorizontal: 20, marginTop: 30 }}>
           <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1f2937', marginBottom: 10 }}>Upcoming Visit</Text>
           <View style={{ backgroundColor: '#f0f9ff', padding: 20, borderRadius: 15, flexDirection: 'row', alignItems: 'center', borderColor: '#bae6fd', borderWidth: 1 }}>
