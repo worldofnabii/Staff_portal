@@ -45,6 +45,7 @@ export default function QRCodeScreen() {
 
   const stats = calculateStats();
   const patientId = data?.patient?._id;
+  const latestVisit = data?.vitals?.[0];
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -80,6 +81,45 @@ export default function QRCodeScreen() {
         </View>
       )}
 
+      {/* RECENT VITALS SUMMARY */}
+      {latestVisit ? (
+        <View style={styles.vitalsSummaryCard}>
+          <View style={styles.vitalsSummaryHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="pulse" size={18} color="#db2777" />
+              <Text style={styles.vitalsSummaryTitle}>Latest Vitals Summary</Text>
+            </View>
+            <Text style={styles.vitalsSummaryDate}>
+              {new Date(latestVisit.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+            </Text>
+          </View>
+
+          <View style={styles.vitalsGrid}>
+            <View style={styles.vitalsItem}>
+              <Text style={styles.vitalsLabel}>Blood Pressure</Text>
+              <Text style={styles.vitalsValue}>{latestVisit.bloodPressure || 'N/A'}</Text>
+            </View>
+            <View style={styles.vitalsItem}>
+              <Text style={styles.vitalsLabel}>Weight</Text>
+              <Text style={styles.vitalsValue}>{latestVisit.weight ? `${latestVisit.weight}kg` : 'N/A'}</Text>
+            </View>
+            <View style={styles.vitalsItem}>
+              <Text style={styles.vitalsLabel}>Fetal Heart Rate</Text>
+              <Text style={styles.vitalsValue}>{latestVisit.fetalHeartRate ? `${latestVisit.fetalHeartRate} bpm` : 'N/A'}</Text>
+            </View>
+            <View style={styles.vitalsItem}>
+              <Text style={styles.vitalsLabel}>Blood Sugar</Text>
+              <Text style={styles.vitalsValue}>{latestVisit.bloodSugar ? `${latestVisit.bloodSugar} mmol/L` : 'Normal'}</Text>
+            </View>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.emptyVitalsCard}>
+          <Ionicons name="pulse-outline" size={24} color="#9ca3af" />
+          <Text style={styles.emptyVitalsText}>No recent vitals recorded yet.</Text>
+        </View>
+      )}
+
       <View style={styles.disclaimerBox}>
         <Ionicons name="information-circle-outline" size={20} color="#9ca3af" />
         <Text style={styles.disclaimerText}>
@@ -101,5 +141,15 @@ const styles = StyleSheet.create({
   statVal: { fontSize: 18, fontWeight: '900', color: '#111827', marginTop: 10 },
   statLabel: { fontSize: 11, color: '#6b7280', fontWeight: 'bold', textTransform: 'uppercase', marginTop: 2 },
   disclaimerBox: { flexDirection: 'row', marginTop: 40, backgroundColor: '#f3f4f6', padding: 15, borderRadius: 15, alignItems: 'center' },
-  disclaimerText: { flex: 1, fontSize: 11, color: '#9ca3af', marginLeft: 10 }
+  disclaimerText: { flex: 1, fontSize: 11, color: '#9ca3af', marginLeft: 10 },
+  vitalsSummaryCard: { backgroundColor: '#fff', padding: 20, borderRadius: 20, width: '100%', marginTop: 25, borderWidth: 1, borderColor: '#f3f4f6', shadowColor: '#000', shadowOpacity: 0.02, shadowRadius: 10, elevation: 1 },
+  vitalsSummaryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#f3f4f6', paddingBottom: 12, marginBottom: 12 },
+  vitalsSummaryTitle: { fontSize: 14, fontWeight: 'bold', color: '#111827', marginLeft: 8 },
+  vitalsSummaryDate: { fontSize: 11, color: '#9ca3af' },
+  vitalsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  vitalsItem: { width: '48%', backgroundColor: '#fafafa', padding: 12, borderRadius: 12, marginBottom: 10 },
+  vitalsLabel: { fontSize: 10, fontWeight: 'bold', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5 },
+  vitalsValue: { fontSize: 15, fontWeight: 'bold', color: '#1f2937', marginTop: 2 },
+  emptyVitalsCard: { width: '100%', marginTop: 25, padding: 20, backgroundColor: '#f9fafb', borderRadius: 20, borderStyle: 'dashed', borderWidth: 1, borderColor: '#d1d5db', alignItems: 'center', justifyContent: 'center' },
+  emptyVitalsText: { color: '#9ca3af', fontStyle: 'italic', fontSize: 13, marginTop: 8 }
 });

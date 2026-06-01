@@ -1,8 +1,8 @@
-# MammaCare: Digital Maternity Care System 💓
+# MammaCare: Digital Maternity Care System 
 
 MammaCare is a modernized digital maternity platform designed to replace traditional paper-based antenatal cards. It provides a multi-tenant, real-time bridge between expectant mothers and hospital staff.
 
-## 🚀 The Stack
+## The Stack
 - **Backend**: Node.js / Express with **Prisma ORM** & **PostgreSQL**.
 - **Web Portal**: **Next.js** for secure clinical management and SOS monitoring.
 - **Mobile App**: **React Native / Expo** for patient access and emergency alerts.
@@ -10,7 +10,7 @@ MammaCare is a modernized digital maternity platform designed to replace traditi
 
 ---
 
-## 🛠 Features & Live Simulation
+## Features & Live Simulation
 The system is pre-configured with a **Scaled Multi-Tenant Simulation**:
 
 1.  **Emergency Response Hub**: Real-time SOS alerts with audio-visual cues and pulse monitoring.
@@ -20,7 +20,7 @@ The system is pre-configured with a **Scaled Multi-Tenant Simulation**:
 
 ---
 
-## 🚦 Access & Live URLs
+## Access & Live URLs
 
 > [!IMPORTANT]
 > **External Testing**: To enable connectivity from real mobile devices on 4G/LTE, use the following public tunnels:
@@ -31,9 +31,9 @@ The system is pre-configured with a **Scaled Multi-Tenant Simulation**:
 
 ---
 
-## 🧪 Test Credentials
+## Test Credentials
 
-### 🏥 Hospital Ecosystem
+### Hospital Ecosystem
 | Facility | Role | Email | Password |
 | :--- | :--- | :--- | :--- |
 | **MammaCare General** | **Doctor** | `doctor@hospital.com` | `password123` |
@@ -41,7 +41,7 @@ The system is pre-configured with a **Scaled Multi-Tenant Simulation**:
 | **Western Memorial** | **Doctor** | `alan@memorial.com` | `password123` |
 | **St. Mary's Clinic** | **Nurse** | `sarah@stmarys.com` | `password123` |
 
-### 🤰 Patients (Mobile App)
+###  Patients (Mobile App)
 | Scenario | Case Study | Email | Password |
 | :--- | :--- | :--- | :--- |
 | **High-Risk Case** | **Elena Gilbert** | `elena@mysticfalls.com` | `password123` |
@@ -50,7 +50,7 @@ The system is pre-configured with a **Scaled Multi-Tenant Simulation**:
 
 ---
 
-## 📱 Mobile App (Local Setup)
+##  Mobile App (Local Setup)
 To run the Mobile app specifically:
 1. Navigate to the `mobile/` directory.
 2. Ensure the backend tunnel is running (`npx localtunnel --port 5000`).
@@ -59,10 +59,9 @@ To run the Mobile app specifically:
 
 ---
 
-## 🔒 Security & Code Quality
+##  Security & Code Quality
 MammaCare is audited for security using **Snyk**.
 - Run `snyk code test` in the root for SAST checks.
 - Run `snyk container test` on the Docker images for vulnerability scans.
 
----
-*Created for Advanced Maternity Care Digitalization.*
+

@@ -16,7 +16,7 @@ export default function PatientDashboard() {
     try {
       const res = await api.get('/patient/me');
       setPatient(res.data.patient);
-      setVitals(res.data.vitals || []);
+      setVitals((res.data.vitals || []).slice(0, 8));
       setAppointments(res.data.appointments || []);
       setPrescriptions(res.data.prescriptions || []);
     } catch (e) {
@@ -79,8 +79,8 @@ export default function PatientDashboard() {
       </View>
 
       {/* Upcoming Visitation Reminder */}
-      {appointments.length > 0 && (
-        <View style={{ paddingHorizontal: 20, marginTop: 25 }}>
+      <View style={{ paddingHorizontal: 20, marginTop: 25 }}>
+        {appointments.length > 0 ? (
           <View style={styles.reminderCard}>
             <View style={styles.reminderIcon}>
               <Ionicons name="calendar-outline" size={24} color="#db2777" />
@@ -93,8 +93,21 @@ export default function PatientDashboard() {
               <Text style={styles.reminderPurpose}>{appointments[0].purpose}</Text>
             </View>
           </View>
-        </View>
-      )}
+        ) : (
+          <View style={[styles.reminderCard, { borderColor: '#e5e7eb', shadowColor: '#000', shadowOpacity: 0.02, elevation: 1 }]}>
+            <View style={[styles.reminderIcon, { backgroundColor: '#f3f4f6' }]}>
+              <Ionicons name="calendar-outline" size={24} color="#9ca3af" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 15 }}>
+              <Text style={[styles.reminderTitle, { color: '#9ca3af' }]}>Next Visitation Date</Text>
+              <Text style={[styles.reminderDate, { fontSize: 16, color: '#4b5563', marginTop: 2 }]}>No Visit Scheduled</Text>
+              <Text style={[styles.reminderPurpose, { fontSize: 12, color: '#9ca3af', marginTop: 2 }]}>
+                Please schedule your next antenatal checkup with your clinic.
+              </Text>
+            </View>
+          </View>
+        )}
+      </View>
 
       {/* Daily Medications */}
       <View style={{ paddingHorizontal: 20, marginTop: 30 }}>

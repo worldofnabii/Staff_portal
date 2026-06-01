@@ -9,10 +9,15 @@ import { LineChart } from 'react-native-chart-kit';
 export default function RecordTab() {
   const [data, setData] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [expandedMedIndex, setExpandedMedIndex] = useState<number | null>(null);
 
   const fetchDetails = async () => {
     try {
       const res = await api.get('/patient/me');
+      if (res.data && res.data.vitals) {
+        res.data.vitals = res.data.vitals.slice(0, 8);
+      }
       setData(res.data);
     } catch (e) {
       console.log('Error fetching details', e);
@@ -82,17 +87,83 @@ export default function RecordTab() {
       {/* SECTION 1: VISITATION HISTORY */}
       <Text style={styles.title}>Visitation History</Text>
       {vitals && vitals.length > 0 ? (
-        <View style={styles.historyList}>
-          {vitals.map((v: any, idx: number) => (
-            <View key={idx} style={styles.historyItem}>
-              <View style={styles.historyBullet} />
-              <View style={{ flex: 1, marginLeft: 15 }}>
-                <Text style={styles.historyDate}>{new Date(v.createdAt).toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</Text>
-                <Text style={styles.historyGA}>Gestational Age: {v.gestationalAge || 'Not recorded'}</Text>
+        <View style={styles.tableContainer}>
+          {/* Table Header */}
+          <View style={styles.tableHeader}>
+            <Text style={[styles.headerCell, { flex: 1.5 }]}>Date</Text>
+            <Text style={[styles.headerCell, { flex: 1 }]}>BP</Text>
+            <Text style={[styles.headerCell, { flex: 1 }]}>Weight</Text>
+            <Text style={[styles.headerCell, { flex: 1 }]}>GA</Text>
+            <View style={{ width: 20 }} />
+          </View>
+
+          {/* Table Rows (Limited to 8 most recent visits) */}
+          {vitals.slice(0, 8).map((v: any, idx: number) => {
+            const isExpanded = expandedIndex === idx;
+            const dateStr = new Date(v.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: '2-digit' });
+            return (
+              <View key={idx} style={[styles.tableRowContainer, isExpanded && styles.activeRow]}>
+                <TouchableOpacity 
+                  style={styles.tableRow} 
+                  activeOpacity={0.7}
+                  onPress={() => setExpandedIndex(isExpanded ? null : idx)}
+                >
+                  <Text style={[styles.rowCell, styles.boldText, { flex: 1.5 }]}>{dateStr}</Text>
+                  <Text style={[styles.rowCell, { flex: 1 }]}>{v.bloodPressure || 'N/A'}</Text>
+                  <Text style={[styles.rowCell, { flex: 1 }]}>{v.weight ? `${v.weight}kg` : 'N/A'}</Text>
+                  <Text style={[styles.rowCell, { flex: 1 }]}>{v.gestationalAge || 'N/A'}</Text>
+                  <Ionicons 
+                    name={isExpanded ? "chevron-up" : "chevron-down"} 
+                    size={16} 
+                    color={isExpanded ? "#db2777" : "#9ca3af"} 
+                  />
+                </TouchableOpacity>
+
+                {isExpanded && (
+                  <View style={styles.expandedDetails}>
+                    <View style={styles.detailsGrid}>
+                      <View style={styles.detailsCol}>
+                        <Text style={styles.detailLabel}>Fetal Heart Rate</Text>
+                        <Text style={styles.detailValue}>
+                          <Ionicons name="heart" size={12} color="#ef4444" /> {v.fetalHeartRate ? `${v.fetalHeartRate} bpm` : 'N/A'}
+                        </Text>
+                      </View>
+                      <View style={styles.detailsCol}>
+                        <Text style={styles.detailLabel}>Blood Sugar</Text>
+                        <Text style={styles.detailValue}>{v.bloodSugar ? `${v.bloodSugar} mmol/L` : 'N/A'}</Text>
+                      </View>
+                    </View>
+
+                    <View style={[styles.detailsGrid, { marginTop: 12 }]}>
+                      <View style={styles.detailsCol}>
+                        <Text style={styles.detailLabel}>Urine Protein</Text>
+                        <Text style={styles.detailValue}>{v.urineProtein || 'Nil'}</Text>
+                      </View>
+                      <View style={styles.detailsCol}>
+                        <Text style={styles.detailLabel}>Urine Sugar</Text>
+                        <Text style={styles.detailValue}>{v.urineSugar || 'Nil'}</Text>
+                      </View>
+                    </View>
+
+                    {v.doctorNotes && (
+                      <View style={styles.notesSection}>
+                        <Text style={styles.detailLabel}>Clinical Notes</Text>
+                        <Text style={styles.notesText}>"{v.doctorNotes}"</Text>
+                      </View>
+                    )}
+
+                    {v.recordedBy && (
+                      <View style={styles.recordedBySection}>
+                        <Text style={styles.recordedByText}>
+                          Recorded by: <Text style={styles.boldText}>{v.recordedBy.name}</Text> ({v.recordedBy.role})
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#d1d5db" />
-            </View>
-          ))}
+            );
+          })}
         </View>
       ) : (
         <View style={styles.emptyCard}><Text style={styles.empty}>No visitation records yet.</Text></View>
@@ -176,17 +247,69 @@ export default function RecordTab() {
 
       <Text style={styles.title}>Medication History</Text>
       {prescriptions && prescriptions.length > 0 ? (
-        prescriptions.map((m: any, idx: number) => (
-          <View key={idx} style={styles.medCard}>
-            <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-              <Text style={styles.medName}>{m.medication}</Text>
-              <View style={[styles.statusTag, { backgroundColor: m.isActive ? '#ecfdf5' : '#f3f4f6' }]}>
-                <Text style={[styles.statusText, { color: m.isActive ? '#059669' : '#6b7280' }]}>{m.isActive ? 'Active' : 'Completed'}</Text>
-              </View>
-            </View>
-            <Text style={styles.medDose}>{m.dosage} • {m.frequency}</Text>
+        <View style={styles.tableContainer}>
+          {/* Table Header */}
+          <View style={styles.tableHeader}>
+            <Text style={[styles.headerCell, { flex: 2.2 }]}>Medication</Text>
+            <Text style={[styles.headerCell, { flex: 1 }]}>Dose</Text>
+            <Text style={[styles.headerCell, { flex: 1.2 }]}>Freq</Text>
+            <Text style={[styles.headerCell, { flex: 1.1 }]}>Status</Text>
+            <View style={{ width: 20 }} />
           </View>
-        ))
+
+          {/* Table Rows */}
+          {prescriptions.map((m: any, idx: number) => {
+            const isExpanded = expandedMedIndex === idx;
+            const dateStr = new Date(m.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: '2-digit' });
+            return (
+              <View key={idx} style={[styles.tableRowContainer, isExpanded && styles.activeRow]}>
+                <TouchableOpacity 
+                  style={styles.tableRow} 
+                  activeOpacity={0.7}
+                  onPress={() => setExpandedMedIndex(isExpanded ? null : idx)}
+                >
+                  <Text style={[styles.rowCell, styles.boldText, { flex: 2.2 }]} numberOfLines={1}>{m.medication}</Text>
+                  <Text style={[styles.rowCell, { flex: 1 }]}>{m.dosage || 'N/A'}</Text>
+                  <Text style={[styles.rowCell, { flex: 1.2 }]} numberOfLines={1}>{m.frequency || 'N/A'}</Text>
+                  <View style={{ flex: 1.1 }}>
+                    <View style={[styles.statusTag, { backgroundColor: m.isActive ? '#ecfdf5' : '#f3f4f6', alignSelf: 'flex-start' }]}>
+                      <Text style={[styles.statusText, { color: m.isActive ? '#059669' : '#6b7280' }]}>{m.isActive ? 'Active' : 'Ended'}</Text>
+                    </View>
+                  </View>
+                  <Ionicons 
+                    name={isExpanded ? "chevron-up" : "chevron-down"} 
+                    size={16} 
+                    color={isExpanded ? "#db2777" : "#9ca3af"} 
+                  />
+                </TouchableOpacity>
+
+                {isExpanded && (
+                  <View style={styles.expandedDetails}>
+                    <View style={styles.detailsGrid}>
+                      <View style={styles.detailsCol}>
+                        <Text style={styles.detailLabel}>Duration</Text>
+                        <Text style={styles.detailValue}>
+                          <Ionicons name="time-outline" size={12} color="#6b7280" /> {m.duration || 'N/A'}
+                        </Text>
+                      </View>
+                      <View style={styles.detailsCol}>
+                        <Text style={styles.detailLabel}>Prescribed On</Text>
+                        <Text style={styles.detailValue}>{dateStr}</Text>
+                      </View>
+                    </View>
+
+                    {m.notes && (
+                      <View style={styles.notesSection}>
+                        <Text style={styles.detailLabel}>Instructions / Notes</Text>
+                        <Text style={styles.notesText}>"{m.notes}"</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
       ) : (
         <View style={styles.emptyCard}><Text style={styles.empty}>No medication history.</Text></View>
       )}
@@ -211,11 +334,23 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fafafa', paddingHorizontal: 20 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   title: { fontSize: 20, fontWeight: 'bold', marginTop: 30, marginBottom: 15, color: '#1f2937' },
-  historyList: { backgroundColor: '#fff', borderRadius: 24, padding: 10, borderWidth: 1, borderColor: '#f3f4f6' },
-  historyItem: { flexDirection: 'row', alignItems: 'center', padding: 15, borderBottomWidth: 1, borderBottomColor: '#f9fafb' },
-  historyBullet: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#db2777' },
-  historyDate: { fontSize: 15, fontWeight: 'bold', color: '#111827' },
-  historyGA: { fontSize: 13, color: '#6b7280', marginTop: 2 },
+  tableContainer: { backgroundColor: '#fff', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: '#f3f4f6', shadowColor: '#000', shadowOpacity: 0.01, shadowRadius: 10, elevation: 1 },
+  tableHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9fafb', paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+  headerCell: { fontSize: 13, fontWeight: 'bold', color: '#4b5563' },
+  tableRowContainer: { borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  activeRow: { backgroundColor: '#fffbfd' },
+  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 16 },
+  rowCell: { fontSize: 14, color: '#1f2937' },
+  boldText: { fontWeight: 'bold', color: '#111827' },
+  expandedDetails: { padding: 16, backgroundColor: '#fafafa', borderTopWidth: 1, borderTopColor: '#f3f4f6', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  detailsGrid: { flexDirection: 'row', justifyContent: 'space-between' },
+  detailsCol: { flex: 1 },
+  detailLabel: { fontSize: 11, fontWeight: 'bold', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5 },
+  detailValue: { fontSize: 14, fontWeight: '600', color: '#374151', marginTop: 2 },
+  notesSection: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#e5e7eb' },
+  notesText: { fontSize: 13, color: '#4b5563', fontStyle: 'italic', marginTop: 2, lineHeight: 18 },
+  recordedBySection: { marginTop: 10, alignItems: 'flex-end' },
+  recordedByText: { fontSize: 11, color: '#6b7280' },
   chartSection: { backgroundColor: '#fff', padding: 15, borderRadius: 24, marginBottom: 15, borderWidth: 1, borderColor: '#f3f4f6', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.02, shadowRadius: 10, elevation: 2 },
   chartTitle: { fontSize: 14, color: '#6b7280', fontWeight: 'bold', marginBottom: 10 },
   chartHint: { fontSize: 10, color: '#9ca3af', marginTop: 5 },

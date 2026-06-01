@@ -63,13 +63,14 @@ async function main() {
   ];
 
   // CLEAR OLD DATA FOR TEST PATIENTS (Forces onboarding screen to show up again)
-  await prisma.medicalHistory.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
-  await prisma.antenatalVisit.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
-  await prisma.prescription.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
-  await prisma.appointment.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
-  await prisma.carePlan.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
-  await prisma.investigation.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
-  await prisma.preventativeCare.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.medicationLog.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.medicalHistory.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.antenatalVisit.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.prescription.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.appointment.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.carePlan.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.investigation.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.preventativeCare.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
 
   // Adding more generic scale
   for(let i=6; i<=25; i++) {
@@ -124,12 +125,22 @@ async function main() {
 
   // 5. SEED VITALS HISTORY
   const visits = [
-    { patientId: 'PATIENT-001', bloodPressure: '150/100', weight: 72.5, fetalHeartRate: 145, bloodSugar: 6.2, doctorNotes: 'Preeclampsia warning.' },
-    { patientId: 'PATIENT-002', bloodPressure: '110/70', weight: 65.0, fetalHeartRate: 140, urineProtein: 'Nil', urineSugar: 'Nil', createdAt: new Date('2026-01-15T10:00:00Z') },
-    { patientId: 'PATIENT-002', bloodPressure: '115/75', weight: 66.2, fetalHeartRate: 142, urineProtein: 'Trace', urineSugar: 'Nil', createdAt: new Date('2026-02-10T11:00:00Z') },
-    { patientId: 'PATIENT-002', bloodPressure: '118/80', weight: 67.5, fetalHeartRate: 144, urineProtein: '1+', urineSugar: 'Nil', createdAt: new Date('2026-03-05T09:30:00Z') },
-    { patientId: 'PATIENT-002', bloodPressure: '120/80', weight: 69.1, fetalHeartRate: 145, urineProtein: 'Nil', urineSugar: 'Trace', createdAt: new Date('2026-03-25T14:00:00Z') },
-    { patientId: 'PATIENT-002', bloodPressure: '122/82', weight: 70.8, fetalHeartRate: 148, urineProtein: '1+', urineSugar: 'Nil', createdAt: new Date('2026-04-10T08:45:00Z') }
+    // 8 checkups for PATIENT-001 (Elena Gilbert) - High-risk preeclampsia follow-up
+    { patientId: 'PATIENT-001', bloodPressure: '120/80', weight: 65.0, fetalHeartRate: 138, gestationalAge: '10 weeks', doctorNotes: 'Initial antenatal checkup. Healthy progress.', createdAt: new Date('2026-01-05T09:00:00Z') },
+    { patientId: 'PATIENT-001', bloodPressure: '122/82', weight: 66.2, fetalHeartRate: 140, gestationalAge: '12 weeks', doctorNotes: 'Routine follow-up. Weight gain is steady.', createdAt: new Date('2026-01-19T09:30:00Z') },
+    { patientId: 'PATIENT-001', bloodPressure: '125/84', weight: 67.5, fetalHeartRate: 142, gestationalAge: '14 weeks', doctorNotes: 'Mild headache reported. Blood pressure slightly elevated.', createdAt: new Date('2026-02-02T10:00:00Z') },
+    { patientId: 'PATIENT-001', bloodPressure: '130/88', weight: 68.8, fetalHeartRate: 144, gestationalAge: '16 weeks', doctorNotes: 'Checkup. Rest recommended. Monitor BP.', createdAt: new Date('2026-02-16T08:45:00Z') },
+    { patientId: 'PATIENT-001', bloodPressure: '135/90', weight: 70.0, fetalHeartRate: 143, gestationalAge: '18 weeks', doctorNotes: 'Borderline hypertension. Low-sodium diet advised.', createdAt: new Date('2026-03-02T11:00:00Z') },
+    { patientId: 'PATIENT-001', bloodPressure: '140/92', weight: 71.2, fetalHeartRate: 145, gestationalAge: '20 weeks', doctorNotes: 'Preeclampsia warning. Prescribed Aldomet.', createdAt: new Date('2026-03-16T10:15:00Z') },
+    { patientId: 'PATIENT-001', bloodPressure: '142/95', weight: 72.0, fetalHeartRate: 146, gestationalAge: '22 weeks', doctorNotes: 'Strict bed rest advised. BP stable on medication.', createdAt: new Date('2026-03-30T14:30:00Z') },
+    { patientId: 'PATIENT-001', bloodPressure: '150/100', weight: 72.5, fetalHeartRate: 145, gestationalAge: '24 weeks', doctorNotes: 'High-risk preeclampsia follow-up. Emergency protocols reviewed.', createdAt: new Date('2026-04-13T10:00:00Z') },
+
+    // Vitals for PATIENT-002 (Sarah Connor)
+    { patientId: 'PATIENT-002', bloodPressure: '110/70', weight: 65.0, fetalHeartRate: 140, gestationalAge: '12 weeks', urineProtein: 'Nil', urineSugar: 'Nil', createdAt: new Date('2026-01-15T10:00:00Z') },
+    { patientId: 'PATIENT-002', bloodPressure: '115/75', weight: 66.2, fetalHeartRate: 142, gestationalAge: '16 weeks', urineProtein: 'Trace', urineSugar: 'Nil', createdAt: new Date('2026-02-10T11:00:00Z') },
+    { patientId: 'PATIENT-002', bloodPressure: '118/80', weight: 67.5, fetalHeartRate: 144, gestationalAge: '20 weeks', urineProtein: '1+', urineSugar: 'Nil', createdAt: new Date('2026-03-05T09:30:00Z') },
+    { patientId: 'PATIENT-002', bloodPressure: '120/80', weight: 69.1, fetalHeartRate: 145, gestationalAge: '23 weeks', urineProtein: 'Nil', urineSugar: 'Trace', createdAt: new Date('2026-03-25T14:00:00Z') },
+    { patientId: 'PATIENT-002', bloodPressure: '122/82', weight: 70.8, fetalHeartRate: 148, gestationalAge: '26 weeks', urineProtein: '1+', urineSugar: 'Nil', createdAt: new Date('2026-04-10T08:45:00Z') }
   ];
 
   for (const v of visits) {
@@ -195,16 +206,27 @@ async function main() {
     ]
   });
 
-  // 7. SEED APPOINTMENTS FOR SARAH
-  await prisma.appointment.create({
-    data: {
+  // 7. SEED APPOINTMENTS
+  const appointmentsToCreate = [
+    {
+      patientId: 'PATIENT-001',
+      hospitalId: hospitals[0].id,
+      date: new Date(Date.now() + 1000*60*60*24*13), // Exactly 13 days from now!
+      purpose: 'High-Risk Antenatal Follow-up',
+      status: 'Scheduled'
+    },
+    {
       patientId: 'PATIENT-002',
       hospitalId: hospitals[0].id,
       date: new Date(Date.now() + 1000*60*60*24*7), // 7 days from now
       purpose: 'Regular Antenatal Checkup',
       status: 'Scheduled'
     }
-  });
+  ];
+
+  for (const appt of appointmentsToCreate) {
+    await prisma.appointment.create({ data: appt });
+  }
 
   console.log('System Scaled Successfully!');
 }
