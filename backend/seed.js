@@ -62,6 +62,15 @@ async function main() {
     { id: 'PATIENT-005', name: 'Diana Prince', email: 'diana@themyscira.com', hospitalId: hospitals[2].id, bloodGroup: 'AB+' }
   ];
 
+  // CLEAR OLD DATA FOR TEST PATIENTS (Forces onboarding screen to show up again)
+  await prisma.medicalHistory.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.antenatalVisit.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.prescription.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.appointment.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.carePlan.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.investigation.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
+  await prisma.preventativeCare.deleteMany({ where: { patientId: { in: ['PATIENT-002', 'PATIENT-004'] } } });
+
   // Adding more generic scale
   for(let i=6; i<=25; i++) {
     const hIdx = i % 3;
@@ -75,10 +84,19 @@ async function main() {
   }
 
   for (const p of patientsToCreate) {
+    const isNew = p.id === 'PATIENT-002' || p.id === 'PATIENT-004'; // Sarah and MJ want fresh onboarding
     await prisma.patient.upsert({
       where: { email: p.email },
-      update: { ...p, password, edd: new Date(Date.now() + 1000*60*60*24*150) },
-      create: { ...p, password, edd: new Date(Date.now() + 1000*60*60*24*150) }
+      update: { 
+        ...p, 
+        password, 
+        edd: isNew ? null : new Date(Date.now() + 1000*60*60*24*150) 
+      },
+      create: { 
+        ...p, 
+        password, 
+        edd: isNew ? null : new Date(Date.now() + 1000*60*60*24*150) 
+      }
     });
   }
 
@@ -86,6 +104,9 @@ async function main() {
   const meds = [
     { patientId: 'PATIENT-001', medication: 'Methyldopa (Aldomet)', dosage: '250mg', frequency: 'TID', duration: 'Until Delivery', notes: 'Maintain BP below 140/90' },
     { patientId: 'PATIENT-001', medication: 'Folic Acid', dosage: '5mg', frequency: 'Once Daily', duration: '90 days', notes: 'Standard supplement' },
+    { patientId: 'PATIENT-002', medication: 'Folic Acid', dosage: '5mg', frequency: 'Once Daily', duration: '90 days', notes: 'Daily supplement' },
+    { patientId: 'PATIENT-002', medication: 'Ferrous Sulfate', dosage: '200mg', frequency: 'Once Daily', duration: '6 months', notes: 'Take with orange juice' },
+    { patientId: 'PATIENT-002', medication: 'Calcium Carbonate', dosage: '500mg', frequency: 'Twice Daily', duration: '30 days', notes: 'For bone health' },
     { patientId: 'PATIENT-003', medication: 'Metformin', dosage: '500mg', frequency: 'Twice Daily', duration: '30 days', notes: 'G-Diabetes management' },
     { patientId: 'PATIENT-005', medication: 'Iron Supplement', dosage: '200mg', frequency: 'Once Daily', duration: '6 months', notes: 'For mild anemia' }
   ];
@@ -102,16 +123,86 @@ async function main() {
   }
 
   // 5. SEED VITALS HISTORY
-  await prisma.antenatalVisit.create({
+  const visits = [
+    { patientId: 'PATIENT-001', bloodPressure: '150/100', weight: 72.5, fetalHeartRate: 145, bloodSugar: 6.2, doctorNotes: 'Preeclampsia warning.' },
+    { patientId: 'PATIENT-002', bloodPressure: '110/70', weight: 65.0, fetalHeartRate: 140, urineProtein: 'Nil', urineSugar: 'Nil', createdAt: new Date('2026-01-15T10:00:00Z') },
+    { patientId: 'PATIENT-002', bloodPressure: '115/75', weight: 66.2, fetalHeartRate: 142, urineProtein: 'Trace', urineSugar: 'Nil', createdAt: new Date('2026-02-10T11:00:00Z') },
+    { patientId: 'PATIENT-002', bloodPressure: '118/80', weight: 67.5, fetalHeartRate: 144, urineProtein: '1+', urineSugar: 'Nil', createdAt: new Date('2026-03-05T09:30:00Z') },
+    { patientId: 'PATIENT-002', bloodPressure: '120/80', weight: 69.1, fetalHeartRate: 145, urineProtein: 'Nil', urineSugar: 'Trace', createdAt: new Date('2026-03-25T14:00:00Z') },
+    { patientId: 'PATIENT-002', bloodPressure: '122/82', weight: 70.8, fetalHeartRate: 148, urineProtein: '1+', urineSugar: 'Nil', createdAt: new Date('2026-04-10T08:45:00Z') }
+  ];
+
+  for (const v of visits) {
+    await prisma.antenatalVisit.create({
+      data: {
+        ...v,
+        recordedById: staff[2].id, // Nurse Joy
+        hospitalId: hospitals[0].id
+      }
+    });
+  }
+
+  // 6. SEED LABS & PLANS FOR SARAH
+  await prisma.carePlan.create({
     data: {
-      patientId: 'PATIENT-001',
-      recordedById: staff[2].id, // Nurse Joy
+      patientId: 'PATIENT-002',
+      deliveryPlan: 'MammaCare General Hospital',
+      feedingOption: 'Exclusive Breastfeeding',
+      maternityWaitingHome: true,
+      transportLogistics: 'Private Vehicle arranged'
+    }
+  });
+
+  await prisma.investigation.createMany({
+    data: [
+      {
+        patientId: 'PATIENT-002',
+        testType: 'Hemoglobin (Hb)',
+        category: 'Lab',
+        result: '11.5 g/dL',
+        recordedById: staff[2].id,
+        hospitalId: hospitals[0].id,
+        date: new Date('2026-03-25T14:00:00Z')
+      },
+      {
+        patientId: 'PATIENT-002',
+        testType: 'Malaria RDT',
+        category: 'Lab',
+        result: 'Negative',
+        recordedById: staff[3].id,
+        hospitalId: hospitals[1].id,
+        date: new Date('2026-02-10T11:00:00Z')
+      }
+    ]
+  });
+
+  await prisma.preventativeCare.createMany({
+    data: [
+      {
+        patientId: 'PATIENT-002',
+        supplementType: 'Tetanus Toxoid (TT1)',
+        recordedById: staff[2].id,
+        hospitalId: hospitals[0].id,
+        date: new Date('2026-01-15T10:00:00Z')
+      },
+      {
+        patientId: 'PATIENT-002',
+        supplementType: 'IPTp-SP (1st Dose)',
+        recordedById: staff[2].id,
+        hospitalId: hospitals[0].id,
+        date: new Date('2026-03-25T14:00:00Z')
+      }
+    ]
+  });
+
+  // 7. SEED APPOINTMENTS FOR SARAH
+  await prisma.appointment.create({
+    data: {
+      patientId: 'PATIENT-002',
       hospitalId: hospitals[0].id,
-      bloodPressure: '150/100',
-      weight: 72.5,
-      fetalHeartRate: 145,
-      bloodSugar: 6.2,
-      doctorNotes: 'Preeclampsia warning. Prescribed Methyldopa.'
+      date: new Date(Date.now() + 1000*60*60*24*7), // 7 days from now
+      purpose: 'Regular Antenatal Checkup',
+      status: 'Scheduled'
     }
   });
 

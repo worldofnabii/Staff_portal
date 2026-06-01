@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/utils/api";
-import { Activity, User as UserIcon, Calendar, Phone, Save, Stethoscope, Droplets, MapPin, Search } from "lucide-react";
+import { Activity, User as UserIcon, Calendar, Phone, Save, Stethoscope, Droplets, MapPin, Search, TrendingUp, ChevronRight } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 export default function PatientProfile() {
   const { id } = useParams();
@@ -181,47 +182,204 @@ function MedicalHistoryTab({patientId, history, role, onSaved}: any) {
 }
 
 function VisitsTab({patientId, visits, role, onSaved}: any) {
-  const [form, setForm] = useState({ bloodPressure: '', weight: '', fetalHeartRate: '', complaints: '', doctorNotes: '', generalExam: '' });
+  const [form, setForm] = useState({ 
+    systolic: 120, 
+    diastolic: 80, 
+    weight: 70, 
+    fetalHeartRate: '', 
+    complaints: '', 
+    doctorNotes: '', 
+    generalExam: '' 
+  });
+  const [showForm, setShowForm] = useState(false);
+
+  // Prepare chart data
+  const chartData = [...visits].reverse().map(v => ({
+    date: new Date(v.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    bp_sys: parseInt(v.bloodPressure?.split('/')[0]) || 0,
+    bp_dia: parseInt(v.bloodPressure?.split('/')[1]) || 0,
+    weight: v.weight || 0
+  }));
+
   const save = async (e: any) => {
     e.preventDefault();
-    await api.post(`/hospital/patient/${patientId}/visit`, form);
+    const bloodPressure = `${form.systolic}/${form.diastolic}`;
+    await api.post(`/hospital/patient/${patientId}/visit`, { ...form, bloodPressure });
     onSaved();
-    setForm({ bloodPressure: '', weight: '', fetalHeartRate: '', complaints: '', doctorNotes: '', generalExam: '' });
+    setForm({ systolic: 120, diastolic: 80, weight: 70, fetalHeartRate: '', complaints: '', doctorNotes: '', generalExam: '' });
+    setShowForm(false);
   };
+
   return (
-    <div className="grid lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-1 bg-gray-50 p-6 rounded-3xl border border-gray-100 h-fit">
-        <h3 className="font-bold text-lg mb-4 text-gray-800">New Visit Log</h3>
-        <form onSubmit={save} className="space-y-4">
-          <input placeholder="Blood Pressure (e.g. 120/80)" className="w-full p-3 border rounded-xl" value={form.bloodPressure} onChange={e => setForm({...form, bloodPressure: e.target.value})} required/>
-          <input placeholder="Weight (kg)" type="number" className="w-full p-3 border rounded-xl" value={form.weight} onChange={e => setForm({...form, weight: e.target.value})} />
-          <input placeholder="Presenting Complaints" className="w-full p-3 border rounded-xl" value={form.complaints} onChange={e => setForm({...form, complaints: e.target.value})} />
-          {role === 'Doctor' && (
-            <>
-              <textarea placeholder="General / Pelvic Exam Notes" className="w-full p-3 border rounded-xl h-20" value={form.generalExam} onChange={e => setForm({...form, generalExam: e.target.value})} />
-              <textarea placeholder="Doctor Care Notes" className="w-full p-3 border rounded-xl h-20" value={form.doctorNotes} onChange={e => setForm({...form, doctorNotes: e.target.value})} />
-            </>
-          )}
-          <button type="submit" className="w-full py-3 bg-brand-600 text-white font-bold rounded-xl">Save Visit</button>
-        </form>
+    <div className="space-y-10">
+      {/* Trends Graph Section */}
+      <div className="grid lg:grid-cols-2 gap-8">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm relative overflow-hidden group">
+           <div className="flex items-center justify-between mb-6">
+              <div>
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-500 mb-1">Vitals Trend</h4>
+                <h3 className="text-xl font-black text-slate-900">Blood Pressure (mmHg)</h3>
+              </div>
+              <TrendingUp className="text-brand-200 group-hover:text-brand-500 transition-colors" />
+           </div>
+           <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorSys" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#db2777" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#db2777" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8'}} hide={chartData.length === 0} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8'}} domain={[40, 200]} hide={chartData.length === 0} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                />
+                <Area type="monotone" dataKey="bp_sys" stroke="#db2777" strokeWidth={3} fillOpacity={1} fill="url(#colorSys)" name="Systolic" />
+                <Area type="monotone" dataKey="bp_dia" stroke="#fb7185" strokeWidth={3} fillOpacity={0} name="Diastolic" />
+              </AreaChart>
+            </ResponsiveContainer>
+           </div>
+        </div>
+
+        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm relative overflow-hidden group">
+           <div className="flex items-center justify-between mb-6">
+              <div>
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mb-1">Weight Dynamics</h4>
+                <h3 className="text-xl font-black text-slate-900">Patient Weight (kg)</h3>
+              </div>
+              <Activity className="text-blue-200 group-hover:text-blue-500 transition-colors" />
+           </div>
+           <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8'}} hide={chartData.length === 0} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8'}} domain={['dataMin - 5', 'dataMax + 5']} hide={chartData.length === 0} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                />
+                <Line type="step" dataKey="weight" stroke="#3b82f6" strokeWidth={4} dot={{ r: 6, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} name="Weight" />
+              </LineChart>
+            </ResponsiveContainer>
+           </div>
+        </div>
       </div>
-      <div className="lg:col-span-2 space-y-4">
-        <h3 className="font-bold text-lg mb-4 text-gray-800">Visit History</h3>
-        {visits.map((v: any) => (
-          <div key={v.id} className="p-5 border rounded-2xl bg-white shadow-sm flex flex-col gap-3">
-            <div className="flex justify-between items-center text-sm text-gray-500 font-bold border-b pb-2">
-              <span>{new Date(v.createdAt).toLocaleDateString()}</span>
-              <span>{v.recordedBy?.name} ({v.recordedBy?.role})</span>
+
+      <div className="grid lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-1 bg-slate-900 p-8 rounded-[3rem] text-white shadow-xl h-fit">
+          <h3 className="font-black text-2xl mb-6 tracking-tighter">Log Clinical Visit</h3>
+          <form onSubmit={save} className="space-y-8">
+            {/* Visual Sliders for BP */}
+            <div className="space-y-6">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Systolic (Top)</label>
+                  <span className="text-brand-400 font-black">{form.systolic} <small>mmHg</small></span>
+                </div>
+                <input 
+                  type="range" min="70" max="220" 
+                  className="w-full accent-brand-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                  value={form.systolic} onChange={e => setForm({...form, systolic: parseInt(e.target.value)})}
+                />
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Diastolic (Bottom)</label>
+                  <span className="text-pink-400 font-black">{form.diastolic} <small>mmHg</small></span>
+                </div>
+                <input 
+                  type="range" min="40" max="130" 
+                  className="w-full accent-pink-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                  value={form.diastolic} onChange={e => setForm({...form, diastolic: parseInt(e.target.value)})}
+                />
+              </div>
+              <div className="pt-4 border-t border-slate-800">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Weight</label>
+                  <span className="text-blue-400 font-black">{form.weight} <span className="text-xs">kg</span></span>
+                </div>
+                <input 
+                  type="range" min="30" max="180" 
+                  className="w-full accent-blue-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                  value={form.weight} onChange={e => setForm({...form, weight: parseInt(e.target.value)})}
+                />
+              </div>
             </div>
-            <div className="flex gap-6 font-bold text-gray-800">
-               <p>BP: <span className="text-brand-600">{v.bloodPressure || '-'}</span></p>
-               <p>Weight: <span className="text-brand-600">{v.weight || '-'} kg</span></p>
-            </div>
-            {v.complaints && <p className="text-sm"><b>Complaints:</b> {v.complaints}</p>}
-            {v.generalExam && <div className="p-3 bg-red-50 rounded-lg text-sm text-red-900 border border-red-100"><b>Doctor Exam:</b> {v.generalExam}</div>}
-            {v.doctorNotes && <div className="p-3 bg-blue-50 rounded-lg text-sm text-blue-900 border border-blue-100"><b>Notes:</b> {v.doctorNotes}</div>}
+
+            <input placeholder="Add Presenting Complaints..." className="w-full p-4 bg-slate-800 border-none rounded-2xl text-sm font-bold text-white placeholder:text-slate-600 focus:ring-2 ring-brand-500" value={form.complaints} onChange={e => setForm({...form, complaints: e.target.value})} />
+            
+            {role === 'Doctor' && (
+              <div className="space-y-4">
+                <textarea placeholder="Clinical Examination Findings..." className="w-full p-4 bg-slate-800 border-none rounded-2xl text-sm font-bold text-white placeholder:text-slate-600 h-24" value={form.generalExam} onChange={e => setForm({...form, generalExam: e.target.value})} />
+              </div>
+            )}
+            
+            <button type="submit" className="w-full py-4 bg-brand-600 hover:bg-brand-500 text-white font-black rounded-2xl shadow-lg shadow-brand-600/20 transition-all flex items-center justify-center gap-2">
+              <Save size={18} /> Seal Visit Record
+            </button>
+          </form>
+        </div>
+        
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-black text-2xl text-slate-900 tracking-tighter">Visit Chronology</h3>
+            <span className="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-full">{visits.length} Total Logs</span>
           </div>
-        ))}
+          
+          {visits.length === 0 ? (
+            <div className="bg-gray-50 rounded-[2.5rem] p-12 text-center border-2 border-dashed border-gray-100 italic text-gray-400 font-medium">
+               No visits recorded yet for this pregnancy cycle.
+            </div>
+          ) : (
+            visits.map((v: any) => (
+              <div key={v.id} className="p-8 rounded-[2.5rem] bg-white border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col gap-6 group hover:translate-x-2 transition-transform">
+                <div className="flex justify-between items-center border-b border-gray-50 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-brand-50 text-brand-600 rounded-xl flex items-center justify-center font-black">
+                      {v.recordedBy?.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-black text-slate-900 text-sm leading-none">{v.recordedBy?.name}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{v.recordedBy?.role}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-slate-500 text-sm">{new Date(v.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                   <div className="p-4 bg-red-50/50 rounded-2xl border border-red-50 flex flex-col items-center">
+                      <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">Pressure</p>
+                      <p className="text-xl font-black text-red-600">{v.bloodPressure}</p>
+                   </div>
+                   <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-50 flex flex-col items-center">
+                      <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Weight</p>
+                      <p className="text-xl font-black text-blue-600">{v.weight}kg</p>
+                   </div>
+                   <div className="p-4 bg-purple-50/50 rounded-2xl border border-purple-50 flex flex-col items-center">
+                      <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-1">G. Age</p>
+                      <p className="text-xl font-black text-purple-600">{v.gestationalAge || '-'}</p>
+                   </div>
+                   <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-50 flex flex-col items-center">
+                      <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Pulse</p>
+                      <p className="text-xl font-black text-emerald-600">{v.pulse || '-'}</p>
+                   </div>
+                </div>
+
+                {v.complaints && (
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-sm font-medium text-slate-600 italic">
+                    <span className="font-black not-italic text-[10px] text-slate-400 uppercase block mb-1">Complaints</span>
+                    "{v.complaints}"
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

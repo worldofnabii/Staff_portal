@@ -11,7 +11,11 @@ const app = express();
 const prisma = new PrismaClient();
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: '*', // Allow all in dev, but can be restricted later
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // --- LOGGING MIDDLEWARE ---
 app.use((req, res, next) => {
@@ -180,6 +184,7 @@ app.post('/api/auth/login/patient', async (req, res) => {
         name: patient.name, 
         email: patient.email, 
         hospitalId: patient.hospitalId, 
+        edd: patient.edd,
         medicalHistory,
         activeMedication: prescriptions 
       } 
@@ -264,6 +269,33 @@ app.post('/api/hospital/staff', authMiddleware, adminMiddleware, async (req, res
 });
 
 // --- PATIENT PROFILE & ME (MOBILE & WEB) ---
+app.post('/api/patient/onboarding', authMiddleware, async (req, res) => {
+  try {
+    const { lmp } = req.body;
+    if (!lmp) return res.status(400).json({ message: 'LMP date is required' });
+
+    const lmpDate = new Date(lmp);
+    const eddDate = new Date(lmpDate);
+    eddDate.setDate(eddDate.getDate() + 280); // Standard pregnancy duration (40 weeks)
+
+    await prisma.$transaction([
+      prisma.patient.update({
+        where: { id: req.user._id },
+        data: { edd: eddDate }
+      }),
+      prisma.medicalHistory.upsert({
+        where: { patientId: req.user._id },
+        update: { lmp: lmpDate },
+        create: { patientId: req.user._id, lmp: lmpDate }
+      })
+    ]);
+
+    res.json({ message: 'Onboarding completed successfully', edd: eddDate });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/patient/me', authMiddleware, async (req, res) => {
   try {
     const patient = await prisma.patient.findUnique({
@@ -284,19 +316,37 @@ app.get('/api/patient/me', authMiddleware, async (req, res) => {
     });
     
     const prescriptions = await prisma.prescription.findMany({
-      where: { patientId: patient.id, isActive: true },
+      where: { patientId: patient.id },
       include: {
         logs: {
           where: { takenAt: { gte: new Date(new Date().setHours(0,0,0,0)) } }
         }
-      }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const investigations = await prisma.investigation.findMany({
+      where: { patientId: patient.id },
+      orderBy: { date: 'desc' }
+    });
+
+    const preventativeCare = await prisma.preventativeCare.findMany({
+      where: { patientId: patient.id },
+      orderBy: { date: 'desc' }
+    });
+
+    const carePlan = await prisma.carePlan.findUnique({
+      where: { patientId: patient.id }
     });
 
     res.json({ 
       patient: { ...patientWithoutPassword, _id: patient.id }, 
       vitals, 
       appointments, 
-      prescriptions
+      prescriptions,
+      investigations,
+      preventativeCare,
+      carePlan
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -393,6 +443,24 @@ app.post('/api/hospital/prescriptions', authMiddleware, async (req, res) => {
       }
     });
     res.json({ message: 'Prescription added successfully', prescription });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/hospital/appointments', authMiddleware, async (req, res) => {
+  try {
+    const appointments = await prisma.appointment.findMany({
+      where: { 
+        hospitalId: req.user.hospitalId,
+        date: { gte: new Date() } 
+      },
+      include: { 
+        patient: { select: { name: true, phone: true } } 
+      },
+      orderBy: { date: 'asc' }
+    });
+    res.json({ appointments });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

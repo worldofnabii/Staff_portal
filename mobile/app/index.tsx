@@ -17,7 +17,9 @@ export default function LoginScreen() {
       await AsyncStorage.setItem('patientToken', res.data.token);
       
       const hasLMP = res.data.user.medicalHistory?.lmp;
-      if (!hasLMP) {
+      const hasEDD = res.data.user.edd;
+      
+      if (!hasLMP && !hasEDD) {
         router.replace('/onboarding');
       } else {
         router.replace('/(tabs)/dashboard');

@@ -25,11 +25,6 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
 
   const navLinks = [
     { name: "Emergency Alerts", href: "/dashboard", icon: Bell },
-    { name: "Patient Lookup", href: "/dashboard/lookup", icon: Search },
-    ...(role === "Doctor" || role === "Nurse"
-      ? [{ name: "Identify Patient", href: "/dashboard/lookup/camera", icon: Camera }]
-      : []),
-    { name: "Register Patient", href: "/dashboard/register", icon: UserPlus },
   ];
 
   return (

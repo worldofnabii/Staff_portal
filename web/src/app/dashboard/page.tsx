@@ -22,33 +22,45 @@ interface Alert {
   time: string;
 }
 
+interface Appointment {
+  id: string;
+  patientId: string;
+  patient: { name: string; phone: string };
+  date: string;
+  purpose: string;
+  status: string;
+}
+
 export default function AlertsDashboard() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const prevAlertCount = useRef(0);
 
-  const fetchAlerts = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const res = await api.get("/hospital/alerts");
-      const newAlerts = res.data.alerts;
+      const [alertsRes, appointRes] = await Promise.all([
+        api.get("/hospital/alerts"),
+        api.get("/hospital/appointments")
+      ]);
       
-      // TRIGGER SOUND IF NEW ALERTS ARRIVE
+      const newAlerts = alertsRes.data.alerts;
       if (newAlerts.length > prevAlertCount.current) {
         console.log("DING! NEW EMERGENCY ALERT RECEIVED");
-        // Play simple beep frequency if possible or just visual flare
       }
       prevAlertCount.current = newAlerts.length;
       setAlerts(newAlerts);
+      setAppointments(appointRes.data.appointments || []);
     } catch (error) {
-      console.error("Failed to fetch alerts", error);
+      console.error("Failed to fetch dashboard data", error);
     } finally {
       if (loading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAlerts();
-    const interval = setInterval(fetchAlerts, 3000); 
+    fetchDashboardData();
+    const interval = setInterval(fetchDashboardData, 3000); 
     return () => clearInterval(interval);
   }, [loading]);
 
@@ -149,6 +161,56 @@ export default function AlertsDashboard() {
           ))}
         </div>
       )}
+
+      {/* Appointment Notifications Panel */}
+      <div className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-64 h-64 bg-slate-800 rounded-full -mr-32 -mt-32 opacity-50 blur-3xl"></div>
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-3xl font-black tracking-tighter">Scheduled Facility Visits</h2>
+              <p className="text-slate-400 font-medium">Tracking next 24-48 hours of intake</p>
+            </div>
+            <div className="px-4 py-2 bg-slate-800 rounded-xl text-xs font-bold tracking-widest uppercase text-slate-300 border border-slate-700">
+               {appointments.length} Upcoming
+            </div>
+          </div>
+
+          {appointments.length === 0 ? (
+            <div className="py-10 text-center bg-slate-800/50 rounded-[2rem] border border-slate-700/50 border-dashed">
+              <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">No Appointments Scheduled</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {appointments.slice(0, 6).map((app) => (
+                <div key={app.id} className="bg-slate-800 p-6 rounded-2xl border border-slate-700 hover:border-brand-500/50 transition-all group">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-10 h-10 bg-slate-700 text-brand-400 rounded-xl flex items-center justify-center font-black group-hover:bg-brand-500 group-hover:text-white transition-all">
+                      {app.patient.name.charAt(0)}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">Time</p>
+                      <p className="font-bold text-sm">{new Date(app.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                  </div>
+                  <h4 className="font-black text-lg mb-1">{app.patient.name}</h4>
+                  <p className="text-xs text-slate-400 font-bold mb-4 flex items-center gap-1 leading-none uppercase tracking-tighter">
+                    <Clock size={12}/> {new Date(app.date).toDateString()}
+                  </p>
+                  <div className="pt-4 border-t border-slate-700 flex justify-between items-center mt-auto">
+                    <span className="text-[10px] px-2 py-1 bg-brand-500/10 text-brand-400 rounded-lg font-black uppercase tracking-widest border border-brand-500/20">
+                      {app.purpose || 'Routine'}
+                    </span>
+                    <Link href={`/dashboard/patient/${app.patientId}`} className="text-xs font-black text-slate-400 hover:text-white transition-colors">
+                      View Profile →
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

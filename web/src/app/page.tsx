@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/utils/api";
-import { HeartPulse, Loader2, ArrowRight } from "lucide-react";
+import { HeartPulse, Loader2, ArrowRight, Stethoscope } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [role, setRole] = useState<"Doctor" | "Nurse">("Doctor");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +39,7 @@ export default function LoginPage() {
       <div className="absolute -bottom-8 left-20 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
 
       <div className="z-10 w-full max-w-md p-8 glass-panel rounded-[2.5rem]">
-        <div className="flex flex-col items-center mb-10 mt-4">
+        <div className="flex flex-col items-center mb-6 mt-4">
           <div className="p-4 bg-gradient-to-tr from-brand-600 to-brand-400 rounded-3xl text-white shadow-xl shadow-brand-500/30 mb-6 transform -rotate-6 hover:rotate-0 transition duration-300">
             <HeartPulse size={48} strokeWidth={2.5} />
           </div>
@@ -46,6 +47,30 @@ export default function LoginPage() {
             Mamma<span className="text-brand-600">Care</span>
           </h1>
           <p className="text-gray-500 font-medium tracking-wide uppercase text-xs">Medical Provider Portal</p>
+        </div>
+
+        {/* Role Selector */}
+        <div className="flex p-1.5 bg-gray-100/50 backdrop-blur-sm rounded-2xl mb-8 relative">
+          <div 
+            className={`absolute h-[calc(100%-12px)] w-[calc(50%-6px)] bg-white rounded-xl shadow-sm transition-all duration-300 ease-out`}
+            style={{ 
+              transform: `translateX(${role === 'Doctor' ? '0' : '100%'})`,
+              top: '6px',
+              left: '6px'
+            }}
+          />
+          <button 
+            onClick={() => setRole("Doctor")}
+            className={`relative z-10 flex-1 py-2.5 text-sm font-bold transition-colors duration-300 ${role === 'Doctor' ? 'text-gray-900' : 'text-gray-400'}`}
+          >
+            Medical Doctor
+          </button>
+          <button 
+            onClick={() => setRole("Nurse")}
+            className={`relative z-10 flex-1 py-2.5 text-sm font-bold transition-colors duration-300 ${role === 'Nurse' ? 'text-gray-900' : 'text-gray-400'}`}
+          >
+             Nursing Staff
+          </button>
         </div>
 
         {error && (
@@ -56,15 +81,20 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Work Email</label>
-            <input
-              type="email"
-              className="w-full px-5 py-4 rounded-2xl border-2 border-white/50 bg-white/40 focus:bg-white focus:ring-0 focus:border-brand-500 transition-all outline-none text-gray-700 font-semibold shadow-inner"
-              placeholder="e.g. doctor@hospital.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
+              {role === 'Doctor' ? 'Doctor' : 'Nurse'} Work Email
+            </label>
+            <div className="relative group">
+              <input
+                type="email"
+                className="w-full px-5 py-4 pl-12 rounded-2xl border-2 border-white/50 bg-white/40 focus:bg-white focus:ring-0 focus:border-brand-500 transition-all outline-none text-gray-700 font-semibold shadow-inner"
+                placeholder={`e.g. ${role.toLowerCase()}@hospital.com`}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <Stethoscope size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-500 transition-colors" />
+            </div>
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Password</label>
@@ -84,7 +114,7 @@ export default function LoginPage() {
           >
             <span className="absolute w-0 h-0 transition-all duration-500 ease-out bg-white rounded-full group-hover:w-56 group-hover:h-56 opacity-10"></span>
             {loading ? <Loader2 className="animate-spin" /> : (
-              <>Sign In Securely <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
+              <>{role === 'Doctor' ? 'Sign In as Doctor' : 'Sign In as Nurse'} <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
             )}
           </button>
         </form>
