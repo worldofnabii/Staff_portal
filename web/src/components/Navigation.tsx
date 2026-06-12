@@ -25,6 +25,8 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
 
   const navLinks = [
     { name: "Emergency Alerts", href: "/dashboard", icon: Bell },
+    { name: "Registered Patients", href: "/dashboard/patients", icon: Search },
+    { name: "Register Patient", href: "/dashboard/register", icon: UserPlus },
   ];
 
   return (

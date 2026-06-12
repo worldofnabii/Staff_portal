@@ -12,7 +12,6 @@ export default function PatientProfile() {
   const [vitalsHistory, setVitalsHistory] = useState<any[]>([]);
   const [medicalHistory, setMedicalHistory] = useState<any>(null);
   const [investigations, setInvestigations] = useState<any[]>([]);
-  const [carePlan, setCarePlan] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
   const [activeTab, setActiveTab] = useState("Overview");
@@ -27,7 +26,6 @@ export default function PatientProfile() {
       setVitalsHistory(res.data.vitals);
       setMedicalHistory(res.data.medicalHistory);
       setInvestigations(res.data.investigations);
-      setCarePlan(res.data.carePlan);
     } catch (error) {
       console.error("Failed to fetch", error);
     } finally {
@@ -43,7 +41,7 @@ export default function PatientProfile() {
   if (loading) return <div className="flex h-[80vh] items-center justify-center p-8">Loading...</div>;
   if (!patient) return <div className="p-8 text-center text-gray-500 font-medium">Patient not found</div>;
 
-  const tabs = ["Overview", "Medical History", "Visits", "Labs & Scans", "Care Plan"];
+  const tabs = ["Overview", "Medical History", "Visits", "Labs & Scans"];
 
   return (
     <div className="p-8 lg:p-10 max-w-7xl mx-auto flex flex-col gap-8 animate-in fade-in duration-500">
@@ -102,7 +100,6 @@ export default function PatientProfile() {
         {activeTab === "Medical History" && <MedicalHistoryTab patientId={id as string} history={medicalHistory} role={role} onSaved={fetchData} />}
         {activeTab === "Visits" && <VisitsTab patientId={id as string} visits={vitalsHistory} role={role} onSaved={fetchData} />}
         {activeTab === "Labs & Scans" && <LabsTab patientId={id as string} labs={investigations} role={role} onSaved={fetchData} />}
-        {activeTab === "Care Plan" && <CarePlanTab patientId={id as string} plan={carePlan} role={role} onSaved={fetchData} />}
       </div>
     </div>
   );
@@ -386,60 +383,85 @@ function VisitsTab({patientId, visits, role, onSaved}: any) {
 }
 
 function LabsTab({patientId, labs, role, onSaved}: any) {
-  const [form, setForm] = useState({ testType: '', result: '' });
-  const save = async (e: any) => {
+  const [form, setForm] = useState({ testType: '', result: '', attachmentUrl: '' });
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploading(true);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm(prev => ({ ...prev, attachmentUrl: reader.result as string }));
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const save = async (e: React.FormEvent) => {
     e.preventDefault();
     await api.post(`/hospital/patient/${patientId}/investigations`, form);
     onSaved();
-    setForm({ testType: '', result: '' });
+    setForm({ testType: '', result: '', attachmentUrl: '' });
   };
+
   return (
     <div className="grid lg:grid-cols-3 gap-8">
-      {role === 'Doctor' && (
       <div className="lg:col-span-1 bg-gray-50 p-6 rounded-3xl border border-gray-100 h-fit">
-        <h3 className="font-bold text-lg mb-4 text-gray-800">Record Lab</h3>
+        <h3 className="font-bold text-lg mb-4 text-gray-800">Record Lab & Upload Scan</h3>
         <form onSubmit={save} className="space-y-4">
-          <input placeholder="Test Type (e.g. Hb, Syphilis)" className="w-full p-3 border rounded-xl" value={form.testType} onChange={e => setForm({...form, testType: e.target.value})} required/>
-          <input placeholder="Result" className="w-full p-3 border rounded-xl" value={form.result} onChange={e => setForm({...form, result: e.target.value})} required/>
-          <button type="submit" className="w-full py-3 bg-brand-600 text-white font-bold rounded-xl">Save Lab</button>
-        </form>
-      </div>)}
-      <div className={`space-y-4 ${role === 'Doctor' ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
-        <h3 className="font-bold text-lg mb-4 text-gray-800">Labs & Scans History</h3>
-        {labs.length === 0 && <p className="text-gray-500">No labs recorded.</p>}
-        {labs.map((l: any) => (
-          <div key={l.id} className="p-4 border rounded-xl bg-white shadow-sm flex justify-between items-center">
-            <div>
-              <p className="font-bold text-gray-800">{l.testType}</p>
-              <p className="text-sm text-gray-500">{new Date(l.date).toLocaleDateString()}</p>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 mb-1">Test/Scan Name</label>
+            <input placeholder="e.g. Ultrasound Scan, Hb" className="w-full p-3 border rounded-xl text-sm" value={form.testType} onChange={e => setForm({...form, testType: e.target.value})} required/>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 mb-1">Result Notes</label>
+            <input placeholder="e.g. Normal, 11.5 g/dL" className="w-full p-3 border rounded-xl text-sm" value={form.result} onChange={e => setForm({...form, result: e.target.value})} required/>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 mb-1">Upload Scan Image</label>
+            <input type="file" accept="image/*" className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-50 file:text-brand-600 hover:file:bg-brand-100 cursor-pointer" onChange={handleFileChange} />
+          </div>
+          {form.attachmentUrl && (
+            <div className="mt-2 p-2 border rounded-xl bg-white">
+              <p className="text-[10px] font-bold text-slate-400 mb-1 uppercase">Preview</p>
+              <img src={form.attachmentUrl} alt="Preview" className="max-w-full h-auto rounded-lg border max-h-32 object-contain mx-auto" />
             </div>
-            <div className="font-black text-lg text-brand-600">{l.result}</div>
+          )}
+          <button type="submit" disabled={uploading} className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition-all disabled:bg-gray-300">
+            {uploading ? "Processing Image..." : "Save Lab & Scan"}
+          </button>
+        </form>
+      </div>
+      <div className="space-y-6 lg:col-span-2">
+        <h3 className="font-bold text-lg text-gray-800">Labs & Scans History</h3>
+        {labs.length === 0 && <p className="text-gray-500">No labs or scans recorded.</p>}
+        {labs.map((l: any) => (
+          <div key={l.id} className="p-6 border rounded-[2rem] bg-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-slate-50/50 transition-all">
+            <div className="flex-1 space-y-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-bold text-lg text-gray-800">{l.testType}</p>
+                  <p className="text-xs text-gray-500 font-bold">{new Date(l.date || l.createdAt).toLocaleDateString()}</p>
+                </div>
+                <div className="font-black text-xl text-brand-600 md:text-right">{l.result}</div>
+              </div>
+              
+              {l.attachmentUrl && (
+                <div className="mt-3 p-3 bg-slate-50 rounded-2xl border border-slate-100 max-w-md">
+                  <img src={l.attachmentUrl} alt="Scan Record" className="max-w-full h-auto rounded-lg border max-h-48 object-contain bg-white" />
+                  <div className="mt-3 flex gap-2">
+                    <a href={l.attachmentUrl} download={`${l.testType.replace(/\s+/g, '_')}_scan.png`} className="text-xs px-3 py-2 bg-white hover:bg-brand-50 text-brand-600 border border-brand-100 rounded-xl font-bold transition-all inline-block">
+                      Download Scan Image
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
     </div>
-  );
-}
-
-function CarePlanTab({patientId, plan, role, onSaved}: any) {
-  const [form, setForm] = useState(plan || { feedingOption: '', deliveryPlan: '' });
-  const save = async (e: any) => {
-    e.preventDefault();
-    await api.post(`/hospital/patient/${patientId}/careplan`, form);
-    onSaved();
-  };
-  const isDoc = role === 'Doctor';
-  return (
-    <form onSubmit={save} className="max-w-2xl space-y-6">
-       <div>
-          <label className="block text-sm font-bold text-gray-500 mb-1">Feeding Option</label>
-          <input disabled={!isDoc} placeholder="e.g. Exclusive Breastfeeding" className="w-full p-3 border rounded-xl" value={form.feedingOption || ''} onChange={e => setForm({...form, feedingOption: e.target.value})} />
-        </div>
-        <div>
-          <label className="block text-sm font-bold text-gray-500 mb-1">Delivery Plan</label>
-          <textarea disabled={!isDoc} placeholder="e.g. SVD booked for Ward C" className="w-full p-3 border rounded-xl h-24" value={form.deliveryPlan || ''} onChange={e => setForm({...form, deliveryPlan: e.target.value})} />
-        </div>
-        {isDoc && <button type="submit" className="px-8 py-3 bg-brand-600 text-white font-bold rounded-xl">Save Care Plan</button>}
-    </form>
   );
 }

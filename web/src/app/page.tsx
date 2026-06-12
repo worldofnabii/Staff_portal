@@ -49,30 +49,6 @@ export default function LoginPage() {
           <p className="text-gray-500 font-medium tracking-wide uppercase text-xs">Medical Provider Portal</p>
         </div>
 
-        {/* Role Selector */}
-        <div className="flex p-1.5 bg-gray-100/50 backdrop-blur-sm rounded-2xl mb-8 relative">
-          <div 
-            className={`absolute h-[calc(100%-12px)] w-[calc(50%-6px)] bg-white rounded-xl shadow-sm transition-all duration-300 ease-out`}
-            style={{ 
-              transform: `translateX(${role === 'Doctor' ? '0' : '100%'})`,
-              top: '6px',
-              left: '6px'
-            }}
-          />
-          <button 
-            onClick={() => setRole("Doctor")}
-            className={`relative z-10 flex-1 py-2.5 text-sm font-bold transition-colors duration-300 ${role === 'Doctor' ? 'text-gray-900' : 'text-gray-400'}`}
-          >
-            Medical Doctor
-          </button>
-          <button 
-            onClick={() => setRole("Nurse")}
-            className={`relative z-10 flex-1 py-2.5 text-sm font-bold transition-colors duration-300 ${role === 'Nurse' ? 'text-gray-900' : 'text-gray-400'}`}
-          >
-             Nursing Staff
-          </button>
-        </div>
-
         {error && (
           <div className="p-4 mb-6 text-sm font-bold text-red-600 bg-red-50/80 backdrop-blur-md rounded-2xl border border-red-100">
             {error}
@@ -82,13 +58,13 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
-              {role === 'Doctor' ? 'Doctor' : 'Nurse'} Work Email
+              Clinical Staff Work Email
             </label>
             <div className="relative group">
               <input
                 type="email"
                 className="w-full px-5 py-4 pl-12 rounded-2xl border-2 border-white/50 bg-white/40 focus:bg-white focus:ring-0 focus:border-brand-500 transition-all outline-none text-gray-700 font-semibold shadow-inner"
-                placeholder={`e.g. ${role.toLowerCase()}@hospital.com`}
+                placeholder="e.g. doctor@hospital.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -114,7 +90,7 @@ export default function LoginPage() {
           >
             <span className="absolute w-0 h-0 transition-all duration-500 ease-out bg-white rounded-full group-hover:w-56 group-hover:h-56 opacity-10"></span>
             {loading ? <Loader2 className="animate-spin" /> : (
-              <>{role === 'Doctor' ? 'Sign In as Doctor' : 'Sign In as Nurse'} <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
+              <>Sign In <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
             )}
           </button>
         </form>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Alert, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Alert, Dimensions, Image } from 'react-native';
 import { api } from '../../utils/api';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
@@ -35,18 +35,27 @@ export default function RecordTab() {
   };
 
   const handleDownload = async (record: any) => {
+    let imageHtml = "";
+    if (record.attachmentUrl) {
+      imageHtml = `
+        <div style="text-align: center; margin-top: 30px;">
+          <h3 style="color: #4b5563;">Scan Attachment:</h3>
+          <img src="${record.attachmentUrl}" style="max-width: 100%; max-height: 400px; border: 2px solid #f3f4f6; border-radius: 12px; padding: 5px; background: white;" />
+        </div>
+      `;
+    }
     const html = `
       <html>
-        <body style="font-family: sans-serif; padding: 40px;">
-          <h1 style="color: #db2777; text-align: center;">MammaCare Medical Record</h1>
-          <div style="border: 2px solid #fdf2f8; padding: 20px; border-radius: 10px;">
-            <p><strong>Record Type:</strong> ${record.testType || record.supplementType || 'Medical Record'}</p>
-            <p><strong>Category:</strong> ${record.category || 'N/A'}</p>
-            <p><strong>Result / Detail:</strong> ${record.result || 'Provided'}</p>
-            <p><strong>Date:</strong> ${new Date(record.date || record.createdAt).toLocaleDateString()}</p>
+        <body style="font-family: sans-serif; padding: 40px; color: #1f2937;">
+          <h1 style="color: #db2777; text-align: center; margin-bottom: 30px;">MammaCare Clinical Scan Report</h1>
+          <div style="border: 2px solid #fce7f3; padding: 25px; border-radius: 16px; background-color: #fffdfd;">
+            <p style="font-size: 16px;"><strong>Record Type:</strong> ${record.testType || record.supplementType || 'Medical Record'}</p>
+            <p style="font-size: 16px;"><strong>Result / Detail:</strong> ${record.result || 'Provided'}</p>
+            <p style="font-size: 16px;"><strong>Date:</strong> ${new Date(record.date || record.createdAt).toLocaleDateString()}</p>
           </div>
+          ${imageHtml}
           <br/>
-          <p style="font-size: 10px; color: gray; text-align: center;">This is a digitally generated report from the MammaCare Mobile Platform.</p>
+          <p style="font-size: 11px; color: #9ca3af; text-align: center; margin-top: 50px;">This is a digitally generated report from the MammaCare Mobile Platform.</p>
         </body>
       </html>
     `;
@@ -229,20 +238,59 @@ export default function RecordTab() {
       </View>
 
       {/* SECTION 3: OTHER RECORDS */}
-      <Text style={styles.title}>Maternity Care Plan</Text>
-      {carePlan ? (
-        <View style={styles.cardHighlight}>
-          <View style={styles.planInfo}>
-             <Ionicons name="location-outline" size={18} color="#6b7280" />
-             <Text style={styles.cardText}><Text style={styles.bold}>Delivery Site:</Text> {carePlan.deliveryPlan || 'Not arranged'}</Text>
+      <Text style={styles.title}>Labs & Scans</Text>
+      {investigations && investigations.length > 0 ? (
+        <View style={styles.tableContainer}>
+          {/* Table Header */}
+          <View style={styles.tableHeader}>
+            <Text style={[styles.headerCell, { flex: 2 }]}>Test/Scan</Text>
+            <Text style={[styles.headerCell, { flex: 1.5 }]}>Date</Text>
+            <Text style={[styles.headerCell, { flex: 1.5 }]}>Result</Text>
           </View>
-          <View style={styles.planInfo}>
-             <Ionicons name="restaurant-outline" size={18} color="#6b7280" />
-             <Text style={styles.cardText}><Text style={styles.bold}>Feeding Option:</Text> {carePlan.feedingOption || '-'}</Text>
-          </View>
+          
+          {/* Table Rows */}
+          {investigations.map((l: any, idx: number) => {
+            const dateStr = new Date(l.date || l.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: '2-digit' });
+            return (
+              <View key={idx} style={styles.tableRowContainer}>
+                <View style={{ padding: 16 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={[styles.rowCell, styles.boldText, { flex: 2 }]}>{l.testType}</Text>
+                    <Text style={[styles.rowCell, { flex: 1.5 }]}>{dateStr}</Text>
+                    <Text style={[styles.rowCell, { flex: 1.5, fontWeight: '900', color: '#db2777', textAlign: 'right' }]}>{l.result}</Text>
+                  </View>
+                  
+                  {l.attachmentUrl && (
+                    <View style={{ marginTop: 12, padding: 12, backgroundColor: '#f9fafb', borderRadius: 16, borderHeight: 1, borderColor: '#f3f4f6' }}>
+                      <Image 
+                        source={{ uri: l.attachmentUrl }} 
+                        style={{ width: '100%', height: 180, borderRadius: 12, resizeMode: 'contain', backgroundColor: '#fff' }} 
+                      />
+                      <TouchableOpacity 
+                        style={{ 
+                          marginTop: 12, 
+                          backgroundColor: '#db2777', 
+                          padding: 12, 
+                          borderRadius: 12, 
+                          alignItems: 'center', 
+                          flexDirection: 'row', 
+                          justifyContent: 'center', 
+                          gap: 6
+                        }}
+                        onPress={() => handleDownload(l)}
+                      >
+                        <Ionicons name="download-outline" size={16} color="#fff" />
+                        <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>Download Scan (PDF)</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              </View>
+            );
+          })}
         </View>
       ) : (
-        <View style={styles.emptyCard}><Text style={styles.empty}>No Care Plan recorded.</Text></View>
+        <View style={styles.emptyCard}><Text style={styles.empty}>No labs or scans recorded.</Text></View>
       )}
 
       <Text style={styles.title}>Medication History</Text>

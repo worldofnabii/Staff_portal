@@ -117,8 +117,8 @@ export default function EducationTab() {
 
       <View style={styles.content}>
         {tips.map((tip, idx) => (
-          <TouchableOpacity 
-            key={idx} 
+          <TouchableOpacity
+            key={idx}
             style={styles.card}
             activeOpacity={0.8}
             onPress={() => setSelectedTip(tip)}
@@ -151,8 +151,8 @@ export default function EducationTab() {
           <View style={styles.modalContainer}>
             {/* Modal Header */}
             <View style={styles.modalHeader}>
-              <TouchableOpacity 
-                style={styles.closeBtn} 
+              <TouchableOpacity
+                style={styles.closeBtn}
                 onPress={() => setSelectedTip(null)}
               >
                 <Ionicons name="arrow-back" size={24} color="#1f2937" />
@@ -184,7 +184,7 @@ export default function EducationTab() {
                 <Ionicons name="ribbon-outline" size={20} color="#be185d" style={{ marginBottom: 6 }} />
                 <Text style={styles.conclusionText}>{selectedTip.article.conclusion}</Text>
               </View>
-              
+
               <View style={{ height: 40 }} />
             </ScrollView>
           </View>
