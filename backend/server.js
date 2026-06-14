@@ -335,18 +335,13 @@ app.get('/api/patient/me', authMiddleware, async (req, res) => {
       orderBy: { date: 'desc' }
     });
 
-    const carePlan = await prisma.carePlan.findUnique({
-      where: { patientId: patient.id }
-    });
-
     res.json({ 
       patient: { ...patientWithoutPassword, _id: patient.id }, 
       vitals, 
       appointments, 
       prescriptions,
       investigations,
-      preventativeCare,
-      carePlan
+      preventativeCare
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

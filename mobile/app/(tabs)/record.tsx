@@ -69,7 +69,7 @@ export default function RecordTab() {
 
   if (!data) return <View style={styles.center}><Text>Loading Record...</Text></View>;
 
-  const { patient, vitals, carePlan, preventativeCare, investigations, prescriptions } = data;
+  const { patient, vitals, preventativeCare, investigations, prescriptions } = data;
 
   // Process data for charts
   const sortedVitals = [...vitals].reverse();
@@ -261,7 +261,7 @@ export default function RecordTab() {
                   </View>
                   
                   {l.attachmentUrl && (
-                    <View style={{ marginTop: 12, padding: 12, backgroundColor: '#f9fafb', borderRadius: 16, borderHeight: 1, borderColor: '#f3f4f6' }}>
+                    <View style={{ marginTop: 12, padding: 12, backgroundColor: '#f9fafb', borderRadius: 16, borderWidth: 1, borderColor: '#f3f4f6' }}>
                       <Image 
                         source={{ uri: l.attachmentUrl }} 
                         style={{ width: '100%', height: 180, borderRadius: 12, resizeMode: 'contain', backgroundColor: '#fff' }} 

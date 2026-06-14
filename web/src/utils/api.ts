@@ -140,10 +140,6 @@ const getMockDb = () => {
         "PATIENT-002": [
           { id: "lab-1", testType: "Hemoglobin (Hb)", result: "11.5 g/dL", date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString() }
         ]
-      },
-      carePlan: {
-        "PATIENT-001": { feedingOption: "Exclusive Breastfeeding", deliveryPlan: "MammaCare General Hospital SVD" },
-        "PATIENT-002": { feedingOption: "Exclusive Breastfeeding", deliveryPlan: "Western Memorial Hospital SVD" }
       }
     };
     localStorage.setItem("MAMMA_CARE_MOCK_DB", JSON.stringify(defaultDb));
@@ -180,8 +176,7 @@ api.get = async (url: string, config?: any): Promise<any> => {
         patient: patient,
         vitals: db.vitals[id] || [],
         medicalHistory: db.medicalHistory[id] || {},
-        investigations: db.investigations[id] || [],
-        carePlan: db.carePlan[id] || {}
+        investigations: db.investigations[id] || []
       }
     };
   }
@@ -260,13 +255,6 @@ api.post = async (url: string, data?: any, config?: any): Promise<any> => {
     };
     if (!db.investigations[patientId]) db.investigations[patientId] = [];
     db.investigations[patientId].unshift(newLab);
-    saveMockDb(db);
-    return { data: { success: true } };
-  }
-
-  if (url.includes("/careplan")) {
-    const patientId = url.split("/")[3];
-    db.carePlan[patientId] = data;
     saveMockDb(db);
     return { data: { success: true } };
   }

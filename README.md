@@ -59,6 +59,13 @@ To run the Mobile app specifically:
 
 ---
 
+## 🗄️ Database & Prisma Studio (Local Setup)
+To set up the database and use Prisma Studio (the database viewer/editor):
+1. Start the PostgreSQL container: `docker-compose up -d postgres`
+2. Open [backend/README.md](file:///C:/Users/MoReNiKeJi/Documents/MammaCare/backend/README.md) for full instructions on schema syncing, seeding, and starting Prisma Studio (`npx prisma studio`).
+
+---
+
 ##  Security & Code Quality
 MammaCare is audited for security using **Snyk**.
 - Run `snyk code test` in the root for SAST checks.

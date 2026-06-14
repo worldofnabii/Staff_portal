@@ -68,7 +68,6 @@ async function main() {
   await prisma.antenatalVisit.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
   await prisma.prescription.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
   await prisma.appointment.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
-  await prisma.carePlan.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
   await prisma.investigation.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
   await prisma.preventativeCare.deleteMany({ where: { patientId: { in: ['PATIENT-001', 'PATIENT-002', 'PATIENT-004'] } } });
 
@@ -154,15 +153,6 @@ async function main() {
   }
 
   // 6. SEED LABS & PLANS FOR SARAH
-  await prisma.carePlan.create({
-    data: {
-      patientId: 'PATIENT-002',
-      deliveryPlan: 'MammaCare General Hospital',
-      feedingOption: 'Exclusive Breastfeeding',
-      maternityWaitingHome: true,
-      transportLogistics: 'Private Vehicle arranged'
-    }
-  });
 
   await prisma.investigation.createMany({
     data: [

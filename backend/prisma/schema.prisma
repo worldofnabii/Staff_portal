@@ -74,7 +74,6 @@ model Patient {
   visits                AntenatalVisit[]
   investigations        Investigation[]
   preventativeCare      PreventativeCare[]
-  carePlan              CarePlan?
   appointments          Appointment[]
   prescriptions         Prescription[]
   medicationLogs        MedicationLog[]
@@ -216,16 +215,7 @@ model MedicationLog {
   notes          String?
 }
 
-model CarePlan {
-  id                        String  @id @default(cuid())
-  patientId                 String  @unique
-  patient                   Patient @relation(fields: [patientId], references: [id])
-  feedingOption             String?
-  postpartumContraception   String?
-  transportLogistics        String?
-  maternityWaitingHome      Boolean @default(false)
-  deliveryPlan              String?
-}
+
 
 model Appointment {
   id        String   @id @default(cuid())
