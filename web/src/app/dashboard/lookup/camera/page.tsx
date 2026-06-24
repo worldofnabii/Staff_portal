@@ -4,14 +4,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { Camera, ArrowLeft, UserSearch, AlertCircle } from "lucide-react";
+import { api } from "@/utils/api";
 
 export default function CameraLookup() {
   const router = useRouter();
   const [error, setError] = useState("");
 
-  const handleScanSuccess = (decodedText: string) => {
+  const handleScanSuccess = async (decodedText: string) => {
     // Expected format: PATIENT-XXXXX
     if (decodedText.startsWith("PATIENT-")) {
+      try {
+        await api.post("/hospital/checkin", { patientId: decodedText });
+      } catch (err) {
+        console.log("Auto-checkin on scan failed or patient already checked in", err);
+      }
       router.push(`/dashboard/patient/${decodedText}`);
     } else {
       setError("Invalid patient identifier detected.");

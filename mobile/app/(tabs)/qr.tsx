@@ -1,30 +1,33 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, Platform } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { api } from '../../utils/api';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 
 export default function QRCodeScreen() {
   const [data, setData] = useState<any>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await api.get('/patient/me');
-        setData(res.data);
-      } catch (e) {
-        console.log('Error fetching data', e);
-      }
-    };
-    fetchData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const fetchData = async () => {
+        try {
+          const res = await api.get('/patient/me');
+          setData(res.data);
+        } catch (e) {
+          console.log('Error fetching data', e);
+        }
+      };
+      fetchData();
+    }, [])
+  );
 
   const calculateStats = () => {
     if (!data?.medicalHistory?.lmp && !data?.patient?.edd) return null;
     
     const lmpDate = data.medicalHistory?.lmp 
       ? new Date(data.medicalHistory.lmp) 
-      : new Date(new Date(data.patient.edd).getTime() - 1000 * 60 * 60 * 24 * 280);
+      : new Date(new Date(data.patient?.edd || "").getTime() - 1000 * 60 * 60 * 24 * 280);
     
     const today = new Date();
     const diffDays = Math.floor((today.getTime() - lmpDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -44,7 +47,7 @@ export default function QRCodeScreen() {
   };
 
   const stats = calculateStats();
-  const patientId = data?.patient?._id;
+  const patientId = data?.patient?.id || data?.patient?._id;
   const latestVisit = data?.vitals?.[0];
 
   return (
@@ -54,12 +57,19 @@ export default function QRCodeScreen() {
       
       <View style={styles.qrContainer}>
         {patientId ? (
-          <QRCode
-            value={patientId}
-            size={200}
-            color="#000"
-            backgroundColor="#ffffff"
-          />
+          Platform.OS === 'web' ? (
+            <Image
+              source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${patientId}` }}
+              style={{ width: 200, height: 200 }}
+            />
+          ) : (
+            <QRCode
+              value={patientId}
+              size={200}
+              color="#000"
+              backgroundColor="#ffffff"
+            />
+          )
         ) : (
           <Text>Loading QR Code...</Text>
         )}

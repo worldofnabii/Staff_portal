@@ -60,7 +60,10 @@ export default function LoginScreen() {
         <TouchableOpacity style={styles.loginBtn} onPress={handleLogin} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Sign In</Text>}
         </TouchableOpacity>
-        <Text style={styles.hint}>Testing Account: sarah@example.com / password123</Text>
+        <TouchableOpacity style={styles.signupBtn} onPress={() => router.push('/signup')}>
+          <Text style={styles.signupBtnText}>{"Don't have an account? Sign Up"}</Text>
+        </TouchableOpacity>
+        <Text style={styles.hint}>Testing Account: amara@example.com / password123</Text>
       </View>
     </View>
   );
@@ -93,5 +96,15 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginTop: 10, shadowColor: '#db2777', shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }
   },
   loginBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  signupBtn: {
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 10
+  },
+  signupBtnText: {
+    color: '#db2777',
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
   hint: { textAlign: 'center', color: '#9ca3af', marginTop: 20, fontSize: 12 }
 });

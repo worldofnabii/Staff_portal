@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/utils/api";
-import { Activity, User as UserIcon, Calendar, Phone, Save, Stethoscope, Droplets, MapPin, Search, TrendingUp, ChevronRight } from "lucide-react";
+import { Activity, User as UserIcon, Calendar, Phone, Save, Stethoscope, Droplets, MapPin, Search, TrendingUp, ChevronRight, ShieldAlert, Bell } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 export default function PatientProfile() {
@@ -12,6 +12,8 @@ export default function PatientProfile() {
   const [vitalsHistory, setVitalsHistory] = useState<any[]>([]);
   const [medicalHistory, setMedicalHistory] = useState<any>(null);
   const [investigations, setInvestigations] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [activeTab, setActiveTab] = useState("Overview");
@@ -26,10 +28,12 @@ export default function PatientProfile() {
       setVitalsHistory(res.data.vitals);
       setMedicalHistory(res.data.medicalHistory);
       setInvestigations(res.data.investigations);
+      setAppointments(res.data.appointments || []);
+      setNotifications(res.data.notifications || []);
     } catch (error) {
       console.error("Failed to fetch", error);
     } finally {
-      setLoading(false);
+      if (loading) setLoading(false);
     }
   };
 
@@ -41,7 +45,7 @@ export default function PatientProfile() {
   if (loading) return <div className="flex h-[80vh] items-center justify-center p-8">Loading...</div>;
   if (!patient) return <div className="p-8 text-center text-gray-500 font-medium">Patient not found</div>;
 
-  const tabs = ["Overview", "Medical History", "Visits", "Labs & Scans"];
+  const tabs = role === "Admin" ? ["Overview"] : ["Overview", "Medical History", "Visits", "Labs & Scans", "Appointments", "Notifications"];
 
   return (
     <div className="p-8 lg:p-10 max-w-7xl mx-auto flex flex-col gap-8 animate-in fade-in duration-500">
@@ -96,10 +100,12 @@ export default function PatientProfile() {
       <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_40px_rgb(0,0,0,0.02)] border border-gray-50 min-h-[500px] mb-10 relative">
         {message && <div className="mb-6 p-4 bg-brand-50 text-brand-700 rounded-2xl font-bold border border-brand-100">{message}</div>}
 
-        {activeTab === "Overview" && <OverviewTab patient={patient} />}
+        {activeTab === "Overview" && <OverviewTab patient={patient} role={role} onSaved={fetchData} />}
         {activeTab === "Medical History" && <MedicalHistoryTab patientId={id as string} history={medicalHistory} role={role} onSaved={fetchData} />}
         {activeTab === "Visits" && <VisitsTab patientId={id as string} visits={vitalsHistory} role={role} onSaved={fetchData} />}
         {activeTab === "Labs & Scans" && <LabsTab patientId={id as string} labs={investigations} role={role} onSaved={fetchData} />}
+        {activeTab === "Appointments" && <AppointmentsTab patientId={id as string} appointments={appointments} role={role} onSaved={fetchData} />}
+        {activeTab === "Notifications" && <NotificationsTab patientId={id as string} notifications={notifications} role={role} onSaved={fetchData} />}
       </div>
     </div>
   );
@@ -107,28 +113,199 @@ export default function PatientProfile() {
 
 // ---------------- SUBS ----------------
 
-function OverviewTab({patient}: {patient: any}) {
+function OverviewTab({patient, role, onSaved}: {patient: any, role: string, onSaved: () => void}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [form, setForm] = useState({
+    name: patient.name || "",
+    age: patient.age || "",
+    bloodGroup: patient.bloodGroup || "",
+    edd: patient.edd ? new Date(patient.edd).toISOString().split('T')[0] : "",
+    nin: patient.nin || "",
+    occupation: patient.occupation || "",
+    maritalStatus: patient.maritalStatus || "",
+    education: patient.education || "",
+    religion: patient.religion || "",
+    district: patient.district || "",
+    village: patient.village || "",
+    emergencyContact: patient.emergencyContact || "",
+    nokName: patient.nokName || "",
+    nokPhone: patient.nokPhone || "",
+    nokRelationship: patient.nokRelationship || "",
+    nokAddress: patient.nokAddress || ""
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      await api.post(`/hospital/patient/${patient._id}/profile`, {
+        ...form,
+        age: form.age ? parseInt(form.age.toString()) : null
+      });
+      setIsEditing(false);
+      onSaved();
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to update profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isStaff = role === "Doctor" || role === "Nurse";
+
+  if (isEditing) {
+    return (
+      <form onSubmit={handleSave} className="space-y-6 animate-in fade-in duration-300">
+        <div className="flex justify-between items-center border-b pb-4">
+          <h3 className="font-black text-xl text-slate-900 tracking-tight">Edit Patient Profile</h3>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-black rounded-xl text-sm transition-all shadow-md"
+            >
+              {loading ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </div>
+
+        {error && <div className="p-4 bg-red-50 text-red-700 rounded-xl font-bold border border-red-100 text-sm">{error}</div>}
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Section A: Demographics */}
+          <div className="space-y-4">
+            <h4 className="font-bold text-sm text-brand-600 uppercase tracking-wider border-b pb-1">Basic Demographics</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-gray-500 mb-1">Full Name *</label>
+                <input required className="w-full p-3 border rounded-xl text-sm" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Age</label>
+                <input type="number" className="w-full p-3 border rounded-xl text-sm" value={form.age} onChange={e => setForm({...form, age: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Blood Group</label>
+                <input className="w-full p-3 border rounded-xl text-sm" value={form.bloodGroup} onChange={e => setForm({...form, bloodGroup: e.target.value})} />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-gray-500 mb-1">Estimated Delivery Date (EDD)</label>
+                <input type="date" className="w-full p-3 border rounded-xl text-sm" value={form.edd} onChange={e => setForm({...form, edd: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">NIN</label>
+                <input className="w-full p-3 border rounded-xl text-sm" value={form.nin} onChange={e => setForm({...form, nin: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Occupation</label>
+                <input className="w-full p-3 border rounded-xl text-sm" value={form.occupation} onChange={e => setForm({...form, occupation: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Marital Status</label>
+                <input className="w-full p-3 border rounded-xl text-sm" value={form.maritalStatus} onChange={e => setForm({...form, maritalStatus: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Education Level</label>
+                <input className="w-full p-3 border rounded-xl text-sm" value={form.education} onChange={e => setForm({...form, education: e.target.value})} />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-gray-500 mb-1">Religion</label>
+                <input className="w-full p-3 border rounded-xl text-sm" value={form.religion} onChange={e => setForm({...form, religion: e.target.value})} />
+              </div>
+            </div>
+          </div>
+
+          {/* Section B: Location & Next of Kin */}
+          <div className="space-y-4">
+            <h4 className="font-bold text-sm text-brand-600 uppercase tracking-wider border-b pb-1">Location & Next of Kin</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">District</label>
+                <input className="w-full p-3 border rounded-xl text-sm" value={form.district} onChange={e => setForm({...form, district: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Village/Parish</label>
+                <input className="w-full p-3 border rounded-xl text-sm" value={form.village} onChange={e => setForm({...form, village: e.target.value})} />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-gray-500 mb-1">Emergency Phone *</label>
+                <input required className="w-full p-3 border rounded-xl text-sm" value={form.emergencyContact} onChange={e => setForm({...form, emergencyContact: e.target.value})} />
+              </div>
+              <div className="col-span-2 border-t pt-2 mt-2">
+                <label className="block text-xs font-bold text-gray-500 mb-1">Next of Kin Name</label>
+                <input className="w-full p-3 border rounded-xl text-sm" value={form.nokName} onChange={e => setForm({...form, nokName: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">NOK Phone</label>
+                <input className="w-full p-3 border rounded-xl text-sm" value={form.nokPhone} onChange={e => setForm({...form, nokPhone: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">NOK Relationship</label>
+                <input className="w-full p-3 border rounded-xl text-sm" value={form.nokRelationship} onChange={e => setForm({...form, nokRelationship: e.target.value})} />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-gray-500 mb-1">NOK Address</label>
+                <input className="w-full p-3 border rounded-xl text-sm" value={form.nokAddress} onChange={e => setForm({...form, nokAddress: e.target.value})} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    );
+  }
+
   return (
-    <div className="grid md:grid-cols-2 gap-8">
-      <div>
-        <h3 className="font-bold text-lg mb-4 text-gray-800 border-b pb-2">Basic Demographics</h3>
-        <dl className="space-y-3 text-sm">
-          <div className="flex justify-between"><dt className="text-gray-500">NIN</dt><dd className="font-bold">{patient.nin || '-'}</dd></div>
-          <div className="flex justify-between"><dt className="text-gray-500">Occupation</dt><dd className="font-bold">{patient.occupation || '-'}</dd></div>
-          <div className="flex justify-between"><dt className="text-gray-500">Marital Status</dt><dd className="font-bold">{patient.maritalStatus || '-'}</dd></div>
-          <div className="flex justify-between"><dt className="text-gray-500">Education</dt><dd className="font-bold">{patient.education || '-'}</dd></div>
-          <div className="flex justify-between"><dt className="text-gray-500">Religion</dt><dd className="font-bold">{patient.religion || '-'}</dd></div>
-        </dl>
+    <div className="space-y-6">
+      {role === "Admin" && (
+        <div className="p-4 bg-amber-50 text-amber-800 rounded-2xl font-bold border border-amber-100 flex items-center gap-2.5 text-sm animate-in slide-in-from-top-2 duration-300">
+          <ShieldAlert size={18} className="shrink-0 text-amber-600 animate-pulse" />
+          Read-only administrative view of patient profile. Clinical records are restricted.
+        </div>
+      )}
+      
+      <div className="flex justify-between items-center border-b pb-4">
+        <h3 className="font-black text-xl text-slate-900 tracking-tight">Patient Overview</h3>
+        {isStaff && (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="px-5 py-2 bg-brand-50 hover:bg-brand-100 text-brand-600 rounded-xl font-bold text-sm transition-all border border-brand-100"
+          >
+            Edit Profile
+          </button>
+        )}
       </div>
-      <div>
-        <h3 className="font-bold text-lg mb-4 text-gray-800 border-b pb-2">Location & Contacts</h3>
-        <dl className="space-y-3 text-sm">
-          <div className="flex justify-between"><dt className="text-gray-500">District</dt><dd className="font-bold">{patient.district || '-'}</dd></div>
-          <div className="flex justify-between"><dt className="text-gray-500">Village</dt><dd className="font-bold">{patient.village || '-'}</dd></div>
-          <div className="flex justify-between"><dt className="text-gray-500">Emergency Phone</dt><dd className="font-bold text-blue-600">{patient.emergencyContact || '-'}</dd></div>
-          <div className="flex justify-between"><dt className="text-gray-500">NOK Name</dt><dd className="font-bold">{patient.nokName || '-'}</dd></div>
-          <div className="flex justify-between"><dt className="text-gray-500">NOK Phone</dt><dd className="font-bold">{patient.nokPhone || '-'}</dd></div>
-        </dl>
+
+      <div className="grid md:grid-cols-2 gap-8">
+        <div>
+          <h4 className="font-bold text-sm text-slate-400 uppercase tracking-widest border-b pb-2 mb-4">Basic Demographics</h4>
+          <dl className="space-y-3 text-sm">
+            <div className="flex justify-between"><dt className="text-gray-500">NIN</dt><dd className="font-bold">{patient.nin || '-'}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">Occupation</dt><dd className="font-bold">{patient.occupation || '-'}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">Marital Status</dt><dd className="font-bold">{patient.maritalStatus || '-'}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">Education</dt><dd className="font-bold">{patient.education || '-'}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">Religion</dt><dd className="font-bold">{patient.religion || '-'}</dd></div>
+          </dl>
+        </div>
+        <div>
+          <h4 className="font-bold text-sm text-slate-450 uppercase tracking-widest border-b pb-2 mb-4">Location & Contacts</h4>
+          <dl className="space-y-3 text-sm">
+            <div className="flex justify-between"><dt className="text-gray-500">District</dt><dd className="font-bold">{patient.district || '-'}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">Village</dt><dd className="font-bold">{patient.village || '-'}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">Emergency Phone</dt><dd className="font-bold text-blue-600">{patient.emergencyContact || '-'}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">NOK Name</dt><dd className="font-bold">{patient.nokName || '-'}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">NOK Phone</dt><dd className="font-bold">{patient.nokPhone || '-'}</dd></div>
+          </dl>
+        </div>
       </div>
     </div>
   );
@@ -370,7 +547,7 @@ function VisitsTab({patientId, visits, role, onSaved}: any) {
                 {v.complaints && (
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-sm font-medium text-slate-600 italic">
                     <span className="font-black not-italic text-[10px] text-slate-400 uppercase block mb-1">Complaints</span>
-                    "{v.complaints}"
+                    {`"${v.complaints}"`}
                   </div>
                 )}
               </div>
@@ -406,33 +583,41 @@ function LabsTab({patientId, labs, role, onSaved}: any) {
     setForm({ testType: '', result: '', attachmentUrl: '' });
   };
 
+  const isDoc = role === 'Doctor';
+
   return (
     <div className="grid lg:grid-cols-3 gap-8">
       <div className="lg:col-span-1 bg-gray-50 p-6 rounded-3xl border border-gray-100 h-fit">
         <h3 className="font-bold text-lg mb-4 text-gray-800">Record Lab & Upload Scan</h3>
-        <form onSubmit={save} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">Test/Scan Name</label>
-            <input placeholder="e.g. Ultrasound Scan, Hb" className="w-full p-3 border rounded-xl text-sm" value={form.testType} onChange={e => setForm({...form, testType: e.target.value})} required/>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">Result Notes</label>
-            <input placeholder="e.g. Normal, 11.5 g/dL" className="w-full p-3 border rounded-xl text-sm" value={form.result} onChange={e => setForm({...form, result: e.target.value})} required/>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">Upload Scan Image</label>
-            <input type="file" accept="image/*" className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-50 file:text-brand-600 hover:file:bg-brand-100 cursor-pointer" onChange={handleFileChange} />
-          </div>
-          {form.attachmentUrl && (
-            <div className="mt-2 p-2 border rounded-xl bg-white">
-              <p className="text-[10px] font-bold text-slate-400 mb-1 uppercase">Preview</p>
-              <img src={form.attachmentUrl} alt="Preview" className="max-w-full h-auto rounded-lg border max-h-32 object-contain mx-auto" />
+        {isDoc ? (
+          <form onSubmit={save} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Test/Scan Name</label>
+              <input placeholder="e.g. Ultrasound Scan, Hb" className="w-full p-3 border rounded-xl text-sm" value={form.testType} onChange={e => setForm({...form, testType: e.target.value})} required/>
             </div>
-          )}
-          <button type="submit" disabled={uploading} className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition-all disabled:bg-gray-300">
-            {uploading ? "Processing Image..." : "Save Lab & Scan"}
-          </button>
-        </form>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Result Notes</label>
+              <input placeholder="e.g. Normal, 11.5 g/dL" className="w-full p-3 border rounded-xl text-sm" value={form.result} onChange={e => setForm({...form, result: e.target.value})} required/>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Upload Scan Image</label>
+              <input type="file" accept="image/*" className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-50 file:text-brand-600 hover:file:bg-brand-100 cursor-pointer" onChange={handleFileChange} />
+            </div>
+            {form.attachmentUrl && (
+              <div className="mt-2 p-2 border rounded-xl bg-white">
+                <p className="text-[10px] font-bold text-slate-400 mb-1 uppercase">Preview</p>
+                <img src={form.attachmentUrl} alt="Preview" className="max-w-full h-auto rounded-lg border max-h-32 object-contain mx-auto" />
+              </div>
+            )}
+            <button type="submit" disabled={uploading} className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition-all disabled:bg-gray-300">
+              {uploading ? "Processing Image..." : "Save Lab & Scan"}
+            </button>
+          </form>
+        ) : (
+          <div className="p-4 bg-red-50 text-red-600 rounded-2xl border border-red-100 font-bold text-sm">
+            Only Doctors are authorized to record scans and lab investigations.
+          </div>
+        )}
       </div>
       <div className="space-y-6 lg:col-span-2">
         <h3 className="font-bold text-lg text-gray-800">Labs & Scans History</h3>
@@ -461,6 +646,207 @@ function LabsTab({patientId, labs, role, onSaved}: any) {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function AppointmentsTab({ patientId, appointments, role, onSaved }: any) {
+  const [date, setDate] = useState("");
+  const [purpose, setPurpose] = useState("Regular Antenatal Checkup");
+  const [loading, setLoading] = useState(false);
+
+  const handleSchedule = async (e: any) => {
+    e.preventDefault();
+    if (!date) return;
+    setLoading(true);
+    try {
+      await api.post(`/hospital/patient/${patientId}/appointment`, { date, purpose });
+      setDate("");
+      onSaved();
+    } catch (err) {
+      console.error("Failed to schedule appointment", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isStaff = role === "Doctor" || role === "Nurse" || role === "Admin";
+
+  return (
+    <div className="grid lg:grid-cols-3 gap-8 animate-in fade-in duration-300">
+      <div className="lg:col-span-1 bg-gray-50 p-6 rounded-3xl border border-gray-100 h-fit">
+        <h3 className="font-bold text-lg mb-4 text-gray-800">Schedule Next Visit</h3>
+        {isStaff ? (
+          <form onSubmit={handleSchedule} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Appointment Date & Time</label>
+              <input 
+                type="datetime-local" 
+                className="w-full p-3 border rounded-xl text-sm" 
+                value={date} 
+                onChange={e => setDate(e.target.value)} 
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Purpose of Visit</label>
+              <select 
+                className="w-full p-3 border rounded-xl text-sm bg-white font-semibold text-gray-700" 
+                value={purpose} 
+                onChange={e => setPurpose(e.target.value)}
+              >
+                <option value="Regular Antenatal Checkup">Regular Antenatal Checkup</option>
+                <option value="Ultrasound Scan Consultation">Ultrasound Scan Consultation</option>
+                <option value="High-Risk Consultation">High-Risk Consultation</option>
+                <option value="Glucose Tolerance Test">Glucose Tolerance Test</option>
+              </select>
+            </div>
+            <button 
+              type="submit" 
+              disabled={loading || !date} 
+              className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition-all disabled:bg-gray-300 shadow-md"
+            >
+              {loading ? "Scheduling..." : "Schedule Appointment"}
+            </button>
+          </form>
+        ) : (
+          <div className="p-4 bg-red-50 text-red-600 rounded-2xl border border-red-100 font-bold text-sm">
+            Only authorized clinical staff can schedule checkups.
+          </div>
+        )}
+      </div>
+      
+      <div className="lg:col-span-2 space-y-6">
+        <h3 className="font-bold text-lg text-gray-800">Scheduled Appointments</h3>
+        {appointments.length === 0 ? (
+          <p className="text-gray-500 italic">No future appointments scheduled.</p>
+        ) : (
+          <div className="space-y-4">
+            {appointments.map((appt: any) => (
+              <div key={appt.id} className="p-6 border rounded-[2rem] bg-white shadow-sm flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-black text-lg text-slate-800">{appt.purpose || "Antenatal Visit"}</p>
+                  <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">
+                    {new Date(appt.date).toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at {new Date(appt.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <span className="px-3 py-1.5 bg-brand-50 text-brand-600 font-bold text-xs rounded-xl border border-brand-100 uppercase tracking-wider">
+                  {appt.status || "Scheduled"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NotificationsTab({ patientId, notifications, role, onSaved }: any) {
+  const [title, setTitle] = useState("");
+  const [messageText, setMessageText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !messageText.trim()) return;
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      await api.post(`/hospital/patient/${patientId}/notification`, {
+        title: title.trim(),
+        message: messageText.trim()
+      });
+      setTitle("");
+      setMessageText("");
+      setSuccess("Notification pushed successfully to patient portal!");
+      onSaved();
+      setTimeout(() => setSuccess(""), 4000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to push notification");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isStaff = role === "Doctor" || role === "Nurse";
+
+  return (
+    <div className="grid lg:grid-cols-3 gap-8 animate-in fade-in duration-300">
+      <div className="lg:col-span-1 bg-gray-50 p-6 rounded-3xl border border-gray-100 h-fit">
+        <h3 className="font-bold text-lg mb-4 text-gray-800">Push Notification</h3>
+        {isStaff ? (
+          <form onSubmit={handleSend} className="space-y-4">
+            {success && <p className="text-emerald-600 text-xs font-bold bg-emerald-50 p-3 rounded-xl border border-emerald-100">{success}</p>}
+            {error && <p className="text-red-600 text-xs font-bold bg-red-50 p-3 rounded-xl border border-red-100">{error}</p>}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Title</label>
+              <input 
+                type="text" 
+                placeholder="e.g. Appointment rescheduled" 
+                className="w-full p-3 border rounded-xl text-sm font-medium bg-white" 
+                value={title} 
+                onChange={e => setTitle(e.target.value)} 
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Message Content</label>
+              <textarea 
+                placeholder="Type your message to the patient..." 
+                className="w-full p-3 border rounded-xl text-sm font-medium bg-white h-28 resize-none" 
+                value={messageText} 
+                onChange={e => setMessageText(e.target.value)} 
+                required
+              />
+            </div>
+            <button 
+              type="submit" 
+              disabled={loading || !title.trim() || !messageText.trim()} 
+              className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition-all disabled:bg-gray-300 shadow-md flex items-center justify-center gap-1.5"
+            >
+              {loading ? "Pushing..." : "Send Notification"}
+            </button>
+          </form>
+        ) : (
+          <div className="p-4 bg-red-50 text-red-600 rounded-2xl border border-red-100 font-bold text-sm">
+            Only authorized clinical staff can send notifications.
+          </div>
+        )}
+      </div>
+
+      <div className="lg:col-span-2 space-y-6">
+        <h3 className="font-bold text-lg text-gray-800">Sent Notification Logs</h3>
+        {notifications.length === 0 ? (
+          <div className="py-12 text-center bg-gray-50 rounded-[2.5rem] border-2 border-dashed border-gray-100 italic text-gray-400 font-medium">
+             No notifications sent to this patient yet.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {notifications.map((n: any) => (
+              <div key={n.id} className="p-6 border rounded-[2rem] bg-white shadow-sm flex flex-col gap-3 group hover:border-brand-100 transition-all">
+                <div className="flex justify-between items-start border-b border-gray-50 pb-2">
+                  <div>
+                    <p className="font-black text-base text-slate-800">{n.title}</p>
+                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">
+                      Sent by {n.sentBy}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400">
+                    {new Date(n.createdAt).toLocaleDateString()} &bull; {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 font-medium leading-relaxed">
+                  {n.message}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

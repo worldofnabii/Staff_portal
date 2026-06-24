@@ -1,29 +1,41 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import CustomDatePicker from '../components/custom-date-picker';
 import { router } from 'expo-router';
 import { api } from '../utils/api';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function OnboardingScreen() {
+  const [inputType, setInputType] = useState<'lmp' | 'edd'>('lmp');
   const [date, setDate] = useState(new Date());
-  const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const onChange = (event: any, selectedDate?: Date) => {
-    setShow(Platform.OS === 'ios');
-    if (selectedDate) setDate(selectedDate);
-  };
 
   const handleComplete = async () => {
     setLoading(true);
     try {
-      await api.post('/patient/onboarding', { lmp: date.toISOString() });
+      const payload = inputType === 'lmp' 
+        ? { lmp: date.toISOString() } 
+        : { edd: date.toISOString() };
+      
+      await api.post('/patient/onboarding', payload);
       router.replace('/(tabs)/dashboard');
     } catch (e: any) {
       Alert.alert("Error", e.response?.data?.message || "Something went wrong saving your data.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSegmentChange = (type: 'lmp' | 'edd') => {
+    setInputType(type);
+    if (type === 'lmp') {
+      // Set to today's date
+      setDate(new Date());
+    } else {
+      // Set to 9 months in the future by default
+      const future = new Date();
+      future.setMonth(future.getMonth() + 9);
+      setDate(future);
     }
   };
 
@@ -34,22 +46,35 @@ export default function OnboardingScreen() {
           <Ionicons name="calendar-outline" size={60} color="#db2777" />
         </View>
         <Text style={styles.title}>Welcome to MammaCare</Text>
-        <Text style={styles.subtitle}>To personalize your journey, please tell us when your last menstrual period (LMP) started.</Text>
+        
+        {/* Input Toggle Segments */}
+        <View style={styles.segmentContainer}>
+          <TouchableOpacity 
+            style={[styles.segmentButton, inputType === 'lmp' && styles.segmentButtonActive]} 
+            onPress={() => handleSegmentChange('lmp')}
+          >
+            <Text style={[styles.segmentText, inputType === 'lmp' && styles.segmentTextActive]}>LMP Date</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.segmentButton, inputType === 'edd' && styles.segmentButtonActive]} 
+            onPress={() => handleSegmentChange('edd')}
+          >
+            <Text style={[styles.segmentText, inputType === 'edd' && styles.segmentTextActive]}>Due Date (EDD)</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity style={styles.dateSelector} onPress={() => setShow(true)}>
-          <Ionicons name="time-outline" size={24} color="#db2777" />
-          <Text style={styles.dateText}>{date.toLocaleDateString()}</Text>
-        </TouchableOpacity>
+        <Text style={styles.subtitle}>
+          {inputType === 'lmp' 
+            ? "To personalize your journey, please tell us when your last menstrual period (LMP) started."
+            : "To personalize your journey, please tell us your Estimated Due Date (EDD)."}
+        </Text>
 
-        {show && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display="default"
-            onChange={onChange}
-            maximumDate={new Date()}
-          />
-        )}
+        <CustomDatePicker
+          value={date}
+          onChange={(selectedDate) => setDate(selectedDate)}
+          maximumDate={inputType === 'lmp' ? new Date() : new Date(Date.now() + 290 * 24 * 60 * 60 * 1000)}
+          minimumDate={inputType === 'lmp' ? new Date(Date.now() - 290 * 24 * 60 * 60 * 1000) : new Date()}
+        />
 
         <TouchableOpacity 
           style={[styles.button, loading && { opacity: 0.7 }]} 
@@ -67,9 +92,38 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', padding: 30, justifyContent: 'center' },
   content: { alignItems: 'center' },
-  iconContainer: { width: 120, height: 120, backgroundColor: '#fdf2f8', borderRadius: 60, justifyContent: 'center', alignItems: 'center', marginBottom: 30 },
-  title: { fontSize: 28, fontWeight: '900', color: '#db2777', textAlign: 'center', marginBottom: 15 },
-  subtitle: { fontSize: 16, color: '#6b7280', textAlign: 'center', lineHeight: 24, marginBottom: 40 },
+  iconContainer: { width: 120, height: 120, backgroundColor: '#fdf2f8', borderRadius: 60, justifyContent: 'center', alignItems: 'center', marginBottom: 25 },
+  title: { fontSize: 28, fontWeight: '900', color: '#db2777', textAlign: 'center', marginBottom: 25 },
+  segmentContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 15,
+    padding: 4,
+    marginBottom: 20,
+    width: '100%',
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  segmentButtonActive: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  segmentText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#6b7280',
+  },
+  segmentTextActive: {
+    color: '#db2777',
+  },
+  subtitle: { fontSize: 15, color: '#6b7280', textAlign: 'center', lineHeight: 22, marginBottom: 30, paddingHorizontal: 10 },
   dateSelector: { 
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#f3f4f6', 
     borderRadius: 15, padding: 20, width: '100%', marginBottom: 40 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { api } from "@/utils/api";
 import { HeartPulse, Loader2, ArrowRight, Stethoscope } from "lucide-react";
 
@@ -94,6 +95,15 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+
+        <div className="mt-6 text-center">
+          <Link
+            href="/register-hospital"
+            className="text-sm font-bold text-brand-600 hover:text-brand-700 transition-colors inline-flex items-center gap-1"
+          >
+            Register a New Hospital &rarr;
+          </Link>
+        </div>
 
         <div className="mt-10 text-center text-xs font-semibold text-gray-400">
           Encrypted &middot; Protected Health Information

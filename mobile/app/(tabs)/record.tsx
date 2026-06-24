@@ -157,7 +157,7 @@ export default function RecordTab() {
                     {v.doctorNotes && (
                       <View style={styles.notesSection}>
                         <Text style={styles.detailLabel}>Clinical Notes</Text>
-                        <Text style={styles.notesText}>"{v.doctorNotes}"</Text>
+                        <Text style={styles.notesText}>{`"${v.doctorNotes}"`}</Text>
                       </View>
                     )}
 
@@ -184,57 +184,80 @@ export default function RecordTab() {
       {/* Weight Trend */}
       <View style={styles.chartSection}>
         <Text style={styles.chartTitle}>Weight Progress (kg)</Text>
-        <LineChart
-          data={{ labels: chartLabels, datasets: [{ data: weightData }] }}
-          width={Dimensions.get("window").width - 40}
-          height={180}
-          chartConfig={chartConfig}
-          bezier
-          style={styles.chart}
-        />
+        {vitals.length < 2 ? (
+          <View style={styles.chartPlaceholder}>
+            <Ionicons name="analytics-outline" size={24} color="#9ca3af" />
+            <Text style={styles.chartPlaceholderText}>At least 2 visits required for trend</Text>
+          </View>
+        ) : (
+          <LineChart
+            data={{ labels: chartLabels, datasets: [{ data: weightData }] }}
+            width={Dimensions.get("window").width - 40}
+            height={180}
+            chartConfig={chartConfig}
+            bezier
+            style={styles.chart}
+          />
+        )}
       </View>
 
       {/* BP Trend */}
       <View style={styles.chartSection}>
         <Text style={styles.chartTitle}>Blood Pressure (mmHg)</Text>
-        <LineChart
-          data={{ 
-            labels: chartLabels, 
-            datasets: [
-              { data: bpSystolic, color: (opacity = 1) => `rgba(219, 39, 119, ${opacity})` }, // Systolic
-              { data: bpDiastolic, color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})` } // Diastolic
-            ],
-            legend: ["Systolic", "Diastolic"]
-          }}
-          width={Dimensions.get("window").width - 40}
-          height={180}
-          chartConfig={chartConfig}
-          bezier
-          style={styles.chart}
-        />
+        {vitals.length < 2 ? (
+          <View style={styles.chartPlaceholder}>
+            <Ionicons name="analytics-outline" size={24} color="#9ca3af" />
+            <Text style={styles.chartPlaceholderText}>At least 2 visits required for trend</Text>
+          </View>
+        ) : (
+          <LineChart
+            data={{ 
+              labels: chartLabels, 
+              datasets: [
+                { data: bpSystolic, color: (opacity = 1) => `rgba(219, 39, 119, ${opacity})` }, // Systolic
+                { data: bpDiastolic, color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})` } // Diastolic
+              ],
+              legend: ["Systolic", "Diastolic"]
+            }}
+            width={Dimensions.get("window").width - 40}
+            height={180}
+            chartConfig={chartConfig}
+            bezier
+            style={styles.chart}
+          />
+        )}
       </View>
 
       {/* Urine Analysis Trend */}
       <View style={styles.chartSection}>
         <Text style={styles.chartTitle}>Urine Analysis (Level)</Text>
-        <LineChart
-          data={{ 
-            labels: chartLabels, 
-            datasets: [
-              { data: urineProteinData, color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})` }, // Protein
-              { data: urineSugarData, color: (opacity = 1) => `rgba(245, 158, 11, ${opacity})` }   // Sugar
-            ],
-            legend: ["Protein", "Sugar"]
-          }}
-          width={Dimensions.get("window").width - 40}
-          height={180}
-          chartConfig={{
-            ...chartConfig,
-            decimalPlaces: 1,
-          }}
-          style={styles.chart}
-        />
-        <Text style={styles.chartHint}>0=Nil, 0.5=Trace, 1=1+, 2=2+, 3=3+</Text>
+        {vitals.length < 2 ? (
+          <View style={styles.chartPlaceholder}>
+            <Ionicons name="analytics-outline" size={24} color="#9ca3af" />
+            <Text style={styles.chartPlaceholderText}>At least 2 visits required for trend</Text>
+          </View>
+        ) : (
+          <>
+            <LineChart
+              data={{ 
+                labels: chartLabels, 
+                datasets: [
+                  { data: urineProteinData, color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})` }, // Protein
+                  { data: urineSugarData, color: (opacity = 1) => `rgba(245, 158, 11, ${opacity})` }   // Sugar
+                ],
+                legend: ["Protein", "Sugar"]
+              }}
+              width={Dimensions.get("window").width - 40}
+              height={180}
+              chartConfig={{
+                ...chartConfig,
+                decimalPlaces: 1,
+              }}
+              style={styles.chart}
+            />
+            <Text style={styles.chartHint}>0=Nil, 0.5=Trace, 1=1+, 2=2+, 3=3+</Text>
+          </>
+        )}
       </View>
 
       {/* SECTION 3: OTHER RECORDS */}
@@ -349,7 +372,7 @@ export default function RecordTab() {
                     {m.notes && (
                       <View style={styles.notesSection}>
                         <Text style={styles.detailLabel}>Instructions / Notes</Text>
-                        <Text style={styles.notesText}>"{m.notes}"</Text>
+                        <Text style={styles.notesText}>{`"${m.notes}"`}</Text>
                       </View>
                     )}
                   </View>
@@ -413,5 +436,17 @@ const styles = StyleSheet.create({
   cardText: { fontSize: 15, color: '#4b5563', marginLeft: 10 },
   bold: { fontWeight: 'bold', color: '#111827' },
   emptyCard: { padding: 20, backgroundColor: '#f9fafb', borderRadius: 15, borderStyle: 'dashed', borderWidth: 1, borderColor: '#d1d5db' },
-  empty: { color: '#9ca3af', fontStyle: 'italic', textAlign: 'center' }
+  empty: { color: '#9ca3af', fontStyle: 'italic', textAlign: 'center' },
+  chartPlaceholder: {
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%'
+  },
+  chartPlaceholderText: {
+    color: '#9ca3af',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginTop: 8
+  }
 });

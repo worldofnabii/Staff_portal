@@ -1,33 +1,38 @@
 "use client";
-
+ 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Search, LogOut, HeartPulse, Stethoscope, UserPlus } from "lucide-react";
+import { Bell, Search, LogOut, HeartPulse, Stethoscope, UserPlus, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-
+ 
 export default function Navigation({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [role, setRole] = useState("");
   const [name, setName] = useState("");
-
+ 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setRole(localStorage.getItem("staffRole") || "");
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setName(localStorage.getItem("staffName") || "");
   }, []);
-
+ 
   const handleLogout = () => {
     localStorage.clear();
     router.push("/");
   };
-
-  const navLinks = [
-    { name: "Emergency Alerts", href: "/dashboard", icon: Bell },
-    { name: "Registered Patients", href: "/dashboard/patients", icon: Search },
-    { name: "Register Patient", href: "/dashboard/register", icon: UserPlus },
-  ];
+ 
+  const navLinks = role === "Admin"
+    ? [
+        { name: "Staff Management", href: "/dashboard", icon: Users },
+        { name: "Registered Patients", href: "/dashboard/patients", icon: Search },
+      ]
+    : [
+        { name: "Emergency Alerts", href: "/dashboard", icon: Bell },
+        { name: "Registered Patients", href: "/dashboard/patients", icon: Search },
+        { name: "Register Patient", href: "/dashboard/register", icon: UserPlus },
+      ];
 
   return (
     <div className="flex h-screen bg-[#f8fafc] selection:bg-brand-500 selection:text-white">

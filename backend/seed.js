@@ -14,9 +14,9 @@ async function main() {
 
   // 1. CREATE HOSPITALS
   const hospitalsData = [
-    { name: 'MammaCare General Hospital', address: '123 Health Ave, Kampala', licenseNumber: 'MOU-HQ-001' },
-    { name: 'Western Memorial Medical Center', address: '45 Ridge Rd, Fort Portal', licenseNumber: 'MOU-WEST-002' },
-    { name: 'St. Mary’s Maternity Clinic', address: '88 Grace St, Gulu', licenseNumber: 'MOU-NORTH-003' }
+    { name: 'MammaCare General Hospital', address: '123 Health Ave, Ikeja, Lagos', licenseNumber: 'MOU-HQ-001' },
+    { name: 'Western Memorial Medical Center', address: '45 Ridge Rd, Wuse II, Abuja', licenseNumber: 'MOU-WEST-002' },
+    { name: 'St. Mary’s Maternity Clinic', address: '88 Grace St, Bodija, Ibadan', licenseNumber: 'MOU-NORTH-003' }
   ];
 
   const hospitals = [];
@@ -55,11 +55,11 @@ async function main() {
 
   // 3. CREATE PATIENTS (20+ diverse scenarios)
   const patientsToCreate = [
-    { id: 'PATIENT-001', name: 'Elena Gilbert', email: 'elena@mysticfalls.com', hospitalId: hospitals[0].id, bloodGroup: 'A-' },
-    { id: 'PATIENT-002', name: 'Sarah Connor', email: 'sarah@example.com', hospitalId: hospitals[0].id, bloodGroup: 'O+' },
-    { id: 'PATIENT-003', name: 'Lois Lane', email: 'lois@dailyplanet.com', hospitalId: hospitals[0].id, bloodGroup: 'B+' },
-    { id: 'PATIENT-004', name: 'Mary Jane', email: 'mj@oscorp.com', hospitalId: hospitals[1].id, bloodGroup: 'O-' },
-    { id: 'PATIENT-005', name: 'Diana Prince', email: 'diana@themyscira.com', hospitalId: hospitals[2].id, bloodGroup: 'AB+' }
+    { id: 'PATIENT-001', name: 'Chioma Nwachukwu', email: 'chioma@example.com', hospitalId: hospitals[0].id, bloodGroup: 'A-' },
+    { id: 'PATIENT-002', name: 'Amara Adebayo', email: 'amara@example.com', hospitalId: hospitals[0].id, bloodGroup: 'O+' },
+    { id: 'PATIENT-003', name: 'Fatima Bello', email: 'fatima@example.com', hospitalId: hospitals[0].id, bloodGroup: 'B+' },
+    { id: 'PATIENT-004', name: 'Olufunmilayo Johnson', email: 'funmi@example.com', hospitalId: hospitals[1].id, bloodGroup: 'O-' },
+    { id: 'PATIENT-005', name: 'Zainab Ibrahim', email: 'zainab@example.com', hospitalId: hospitals[2].id, bloodGroup: 'AB+' }
   ];
 
   // CLEAR OLD DATA FOR TEST PATIENTS (Forces onboarding screen to show up again)

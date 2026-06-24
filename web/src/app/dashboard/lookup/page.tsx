@@ -11,11 +11,12 @@ export default function PatientLookup() {
 
   const handleLookup = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!patientId.trim()) return;
+    const cleanId = patientId.trim().replace(/^#/, "");
+    if (!cleanId) return;
     setLoading(true);
     // Simulate slight delay for effect
     setTimeout(() => {
-      router.push(`/dashboard/patient/${patientId}`);
+      router.push(`/dashboard/patient/${cleanId}`);
     }, 400);
   };
 
